@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "goteet": {
+      "command": "/Applications/GOTEET.app/Contents/Resources/payload/workmate-api/workmate-api",
+      "args": [
+        "--mcp"
+      ]
+    }
+  }
+}

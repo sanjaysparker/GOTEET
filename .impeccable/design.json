@@ -1,0 +1,638 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T22:23:15.592215+00:00",
+  "title": "Design System: GOTEET",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Warm Apricot",
+        "tonalRamp": [
+          "oklch(15.00% 0.13120 59.18)",
+          "oklch(26.43% 0.13120 59.18)",
+          "oklch(37.86% 0.13120 59.18)",
+          "oklch(49.29% 0.13120 59.18)",
+          "oklch(60.71% 0.13120 59.18)",
+          "oklch(72.14% 0.13120 59.18)",
+          "oklch(83.57% 0.13120 59.18)",
+          "oklch(95.00% 0.13120 59.18)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Light Apricot",
+        "tonalRamp": [
+          "oklch(15.00% 0.09737 59.42)",
+          "oklch(26.43% 0.09737 59.42)",
+          "oklch(37.86% 0.09737 59.42)",
+          "oklch(49.29% 0.09737 59.42)",
+          "oklch(60.71% 0.09737 59.42)",
+          "oklch(72.14% 0.09737 59.42)",
+          "oklch(83.57% 0.09737 59.42)",
+          "oklch(95.00% 0.09737 59.42)"
+        ]
+      },
+      "primary-ink": {
+        "role": "primary",
+        "displayName": "Graphite Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.00846 264.38)",
+          "oklch(26.43% 0.00846 264.38)",
+          "oklch(37.86% 0.00846 264.38)",
+          "oklch(49.29% 0.00846 264.38)",
+          "oklch(60.71% 0.00846 264.38)",
+          "oklch(72.14% 0.00846 264.38)",
+          "oklch(83.57% 0.00846 264.38)",
+          "oklch(95.00% 0.00846 264.38)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Workspace Graphite",
+        "tonalRamp": [
+          "oklch(15.00% 0.00846 264.38)",
+          "oklch(26.43% 0.00846 264.38)",
+          "oklch(37.86% 0.00846 264.38)",
+          "oklch(49.29% 0.00846 264.38)",
+          "oklch(60.71% 0.00846 264.38)",
+          "oklch(72.14% 0.00846 264.38)",
+          "oklch(83.57% 0.00846 264.38)",
+          "oklch(95.00% 0.00846 264.38)"
+        ]
+      },
+      "rail": {
+        "role": "neutral",
+        "displayName": "Deep Rail",
+        "tonalRamp": [
+          "oklch(15.00% 0.00686 258.37)",
+          "oklch(26.43% 0.00686 258.37)",
+          "oklch(37.86% 0.00686 258.37)",
+          "oklch(49.29% 0.00686 258.37)",
+          "oklch(60.71% 0.00686 258.37)",
+          "oklch(72.14% 0.00686 258.37)",
+          "oklch(83.57% 0.00686 258.37)",
+          "oklch(95.00% 0.00686 258.37)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Control Graphite",
+        "tonalRamp": [
+          "oklch(15.00% 0.01214 264.33)",
+          "oklch(26.43% 0.01214 264.33)",
+          "oklch(37.86% 0.01214 264.33)",
+          "oklch(49.29% 0.01214 264.33)",
+          "oklch(60.71% 0.01214 264.33)",
+          "oklch(72.14% 0.01214 264.33)",
+          "oklch(83.57% 0.01214 264.33)",
+          "oklch(95.00% 0.01214 264.33)"
+        ]
+      },
+      "elevated": {
+        "role": "neutral",
+        "displayName": "Raised Graphite",
+        "tonalRamp": [
+          "oklch(15.00% 0.01398 261.70)",
+          "oklch(26.43% 0.01398 261.70)",
+          "oklch(37.86% 0.01398 261.70)",
+          "oklch(49.29% 0.01398 261.70)",
+          "oklch(60.71% 0.01398 261.70)",
+          "oklch(72.14% 0.01398 261.70)",
+          "oklch(83.57% 0.01398 261.70)",
+          "oklch(95.00% 0.01398 261.70)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Slate Divider",
+        "tonalRamp": [
+          "oklch(15.00% 0.01714 262.27)",
+          "oklch(26.43% 0.01714 262.27)",
+          "oklch(37.86% 0.01714 262.27)",
+          "oklch(49.29% 0.01714 262.27)",
+          "oklch(60.71% 0.01714 262.27)",
+          "oklch(72.14% 0.01714 262.27)",
+          "oklch(83.57% 0.01714 262.27)",
+          "oklch(95.00% 0.01714 262.27)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Pale Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.00455 258.32)",
+          "oklch(26.43% 0.00455 258.32)",
+          "oklch(37.86% 0.00455 258.32)",
+          "oklch(49.29% 0.00455 258.32)",
+          "oklch(60.71% 0.00455 258.32)",
+          "oklch(72.14% 0.00455 258.32)",
+          "oklch(83.57% 0.00455 258.32)",
+          "oklch(95.00% 0.00455 258.32)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Slate",
+        "tonalRamp": [
+          "oklch(15.00% 0.01876 261.33)",
+          "oklch(26.43% 0.01876 261.33)",
+          "oklch(37.86% 0.01876 261.33)",
+          "oklch(49.29% 0.01876 261.33)",
+          "oklch(60.71% 0.01876 261.33)",
+          "oklch(72.14% 0.01876 261.33)",
+          "oklch(83.57% 0.01876 261.33)",
+          "oklch(95.00% 0.01876 261.33)"
+        ]
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Success Mint",
+        "tonalRamp": [
+          "oklch(15.00% 0.09848 160.02)",
+          "oklch(26.43% 0.09848 160.02)",
+          "oklch(37.86% 0.09848 160.02)",
+          "oklch(49.29% 0.09848 160.02)",
+          "oklch(60.71% 0.09848 160.02)",
+          "oklch(72.14% 0.09848 160.02)",
+          "oklch(83.57% 0.09848 160.02)",
+          "oklch(95.00% 0.09848 160.02)"
+        ]
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Warning Gold",
+        "tonalRamp": [
+          "oklch(15.00% 0.10992 81.95)",
+          "oklch(26.43% 0.10992 81.95)",
+          "oklch(37.86% 0.10992 81.95)",
+          "oklch(49.29% 0.10992 81.95)",
+          "oklch(60.71% 0.10992 81.95)",
+          "oklch(72.14% 0.10992 81.95)",
+          "oklch(83.57% 0.10992 81.95)",
+          "oklch(95.00% 0.10992 81.95)"
+        ]
+      },
+      "danger": {
+        "role": "status",
+        "displayName": "Danger Rose",
+        "tonalRamp": [
+          "oklch(15.00% 0.12130 20.14)",
+          "oklch(26.43% 0.12130 20.14)",
+          "oklch(37.86% 0.12130 20.14)",
+          "oklch(49.29% 0.12130 20.14)",
+          "oklch(60.71% 0.12130 20.14)",
+          "oklch(72.14% 0.12130 20.14)",
+          "oklch(83.57% 0.12130 20.14)",
+          "oklch(95.00% 0.12130 20.14)"
+        ]
+      },
+      "field": {
+        "role": "neutral",
+        "displayName": "Field Graphite",
+        "tonalRamp": [
+          "oklch(15.00% 0.01064 260.69)",
+          "oklch(26.43% 0.01064 260.69)",
+          "oklch(37.86% 0.01064 260.69)",
+          "oklch(49.29% 0.01064 260.69)",
+          "oklch(60.71% 0.01064 260.69)",
+          "oklch(72.14% 0.01064 260.69)",
+          "oklch(83.57% 0.01064 260.69)",
+          "oklch(95.00% 0.01064 260.69)"
+        ]
+      },
+      "menu": {
+        "role": "neutral",
+        "displayName": "Menu Slate",
+        "tonalRamp": [
+          "oklch(15.00% 0.01590 264.27)",
+          "oklch(26.43% 0.01590 264.27)",
+          "oklch(37.86% 0.01590 264.27)",
+          "oklch(49.29% 0.01590 264.27)",
+          "oklch(60.71% 0.01590 264.27)",
+          "oklch(72.14% 0.01590 264.27)",
+          "oklch(83.57% 0.01590 264.27)",
+          "oklch(95.00% 0.01590 264.27)"
+        ]
+      },
+      "menu-border": {
+        "role": "neutral",
+        "displayName": "Menu Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.02590 256.80)",
+          "oklch(26.43% 0.02590 256.80)",
+          "oklch(37.86% 0.02590 256.80)",
+          "oklch(49.29% 0.02590 256.80)",
+          "oklch(60.71% 0.02590 256.80)",
+          "oklch(72.14% 0.02590 256.80)",
+          "oklch(83.57% 0.02590 256.80)",
+          "oklch(95.00% 0.02590 256.80)"
+        ]
+      },
+      "menu-highlight": {
+        "role": "neutral",
+        "displayName": "Warm Menu Highlight",
+        "tonalRamp": [
+          "oklch(15.00% 0.03680 59.45)",
+          "oklch(26.43% 0.03680 59.45)",
+          "oklch(37.86% 0.03680 59.45)",
+          "oklch(49.29% 0.03680 59.45)",
+          "oklch(60.71% 0.03680 59.45)",
+          "oklch(72.14% 0.03680 59.45)",
+          "oklch(83.57% 0.03680 59.45)",
+          "oklch(95.00% 0.03680 59.45)"
+        ]
+      },
+      "menu-highlight-text": {
+        "role": "neutral",
+        "displayName": "Pale Apricot Text",
+        "tonalRamp": [
+          "oklch(15.00% 0.07320 57.92)",
+          "oklch(26.43% 0.07320 57.92)",
+          "oklch(37.86% 0.07320 57.92)",
+          "oklch(49.29% 0.07320 57.92)",
+          "oklch(60.71% 0.07320 57.92)",
+          "oklch(72.14% 0.07320 57.92)",
+          "oklch(83.57% 0.07320 57.92)",
+          "oklch(95.00% 0.07320 57.92)"
+        ]
+      },
+      "switch-off": {
+        "role": "neutral",
+        "displayName": "Switch Slate",
+        "tonalRamp": [
+          "oklch(15.00% 0.02022 259.41)",
+          "oklch(26.43% 0.02022 259.41)",
+          "oklch(37.86% 0.02022 259.41)",
+          "oklch(49.29% 0.02022 259.41)",
+          "oklch(60.71% 0.02022 259.41)",
+          "oklch(72.14% 0.02022 259.41)",
+          "oklch(83.57% 0.02022 259.41)",
+          "oklch(95.00% 0.02022 259.41)"
+        ]
+      },
+      "switch-on": {
+        "role": "neutral",
+        "displayName": "Switch Warm Brown",
+        "tonalRamp": [
+          "oklch(15.00% 0.09691 58.36)",
+          "oklch(26.43% 0.09691 58.36)",
+          "oklch(37.86% 0.09691 58.36)",
+          "oklch(49.29% 0.09691 58.36)",
+          "oklch(60.71% 0.09691 58.36)",
+          "oklch(72.14% 0.09691 58.36)",
+          "oklch(83.57% 0.09691 58.36)",
+          "oklch(95.00% 0.09691 58.36)"
+        ]
+      },
+      "switch-thumb": {
+        "role": "neutral",
+        "displayName": "Pale Switch Thumb",
+        "tonalRamp": [
+          "oklch(15.00% 0.01523 61.34)",
+          "oklch(26.43% 0.01523 61.34)",
+          "oklch(37.86% 0.01523 61.34)",
+          "oklch(49.29% 0.01523 61.34)",
+          "oklch(60.71% 0.01523 61.34)",
+          "oklch(72.14% 0.01523 61.34)",
+          "oklch(83.57% 0.01523 61.34)",
+          "oklch(95.00% 0.01523 61.34)"
+        ]
+      },
+      "accent-mint": {
+        "role": "secondary",
+        "displayName": "Preference Mint",
+        "tonalRamp": [
+          "oklch(15.00% 0.09848 160.02)",
+          "oklch(26.43% 0.09848 160.02)",
+          "oklch(37.86% 0.09848 160.02)",
+          "oklch(49.29% 0.09848 160.02)",
+          "oklch(60.71% 0.09848 160.02)",
+          "oklch(72.14% 0.09848 160.02)",
+          "oklch(83.57% 0.09848 160.02)",
+          "oklch(95.00% 0.09848 160.02)"
+        ]
+      },
+      "accent-blue": {
+        "role": "secondary",
+        "displayName": "Preference Blue",
+        "tonalRamp": [
+          "oklch(15.00% 0.11038 260.35)",
+          "oklch(26.43% 0.11038 260.35)",
+          "oklch(37.86% 0.11038 260.35)",
+          "oklch(49.29% 0.11038 260.35)",
+          "oklch(60.71% 0.11038 260.35)",
+          "oklch(72.14% 0.11038 260.35)",
+          "oklch(83.57% 0.11038 260.35)",
+          "oklch(95.00% 0.11038 260.35)"
+        ]
+      },
+      "accent-lavender": {
+        "role": "secondary",
+        "displayName": "Preference Lavender",
+        "tonalRamp": [
+          "oklch(15.00% 0.10690 292.90)",
+          "oklch(26.43% 0.10690 292.90)",
+          "oklch(37.86% 0.10690 292.90)",
+          "oklch(49.29% 0.10690 292.90)",
+          "oklch(60.71% 0.10690 292.90)",
+          "oklch(72.14% 0.10690 292.90)",
+          "oklch(83.57% 0.10690 292.90)",
+          "oklch(95.00% 0.10690 292.90)"
+        ]
+      },
+      "chart-track": {
+        "role": "neutral",
+        "displayName": "Chart Track",
+        "tonalRamp": [
+          "oklch(15.00% 0.02116 262.57)",
+          "oklch(26.43% 0.02116 262.57)",
+          "oklch(37.86% 0.02116 262.57)",
+          "oklch(49.29% 0.02116 262.57)",
+          "oklch(60.71% 0.02116 262.57)",
+          "oklch(72.14% 0.02116 262.57)",
+          "oklch(83.57% 0.02116 262.57)",
+          "oklch(95.00% 0.02116 262.57)"
+        ]
+      },
+      "chart-lavender": {
+        "role": "secondary",
+        "displayName": "Chart Lavender",
+        "tonalRamp": [
+          "oklch(15.00% 0.08627 285.73)",
+          "oklch(26.43% 0.08627 285.73)",
+          "oklch(37.86% 0.08627 285.73)",
+          "oklch(49.29% 0.08627 285.73)",
+          "oklch(60.71% 0.08627 285.73)",
+          "oklch(72.14% 0.08627 285.73)",
+          "oklch(83.57% 0.08627 285.73)",
+          "oklch(95.00% 0.08627 285.73)"
+        ]
+      },
+      "viewer-stage": {
+        "role": "neutral",
+        "displayName": "Viewer Stage",
+        "tonalRamp": [
+          "oklch(15.00% 0.00881 264.33)",
+          "oklch(26.43% 0.00881 264.33)",
+          "oklch(37.86% 0.00881 264.33)",
+          "oklch(49.29% 0.00881 264.33)",
+          "oklch(60.71% 0.00881 264.33)",
+          "oklch(72.14% 0.00881 264.33)",
+          "oklch(83.57% 0.00881 264.33)",
+          "oklch(95.00% 0.00881 264.33)"
+        ]
+      },
+      "media-surface": {
+        "role": "neutral",
+        "displayName": "Media Surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.01502 256.80)",
+          "oklch(26.43% 0.01502 256.80)",
+          "oklch(37.86% 0.01502 256.80)",
+          "oklch(49.29% 0.01502 256.80)",
+          "oklch(60.71% 0.01502 256.80)",
+          "oklch(72.14% 0.01502 256.80)",
+          "oklch(83.57% 0.01502 256.80)",
+          "oklch(95.00% 0.01502 256.80)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page Headline",
+        "purpose": "Current workspace heading."
+      },
+      "title": {
+        "displayName": "Section Title",
+        "purpose": "Section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Global base typography."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Compact labels and controls."
+      },
+      "mono": {
+        "displayName": "Code",
+        "purpose": "Code, paths and commit identifiers."
+      }
+    },
+    "shadows": [
+      {
+        "name": "account-menu",
+        "value": "0 12px 32px #0007",
+        "purpose": "Account overlay separation."
+      },
+      {
+        "name": "dialog",
+        "value": "0 20px 60px #0007",
+        "purpose": "Modal separation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "button-state",
+        "value": "background-color .16s, border-color .16s, color .16s, transform .12s",
+        "purpose": "Final button rule; active press translates 1px."
+      },
+      {
+        "name": "answer-in",
+        "value": "answer-in .35s ease-out",
+        "purpose": "Assistant entry: blur(2px) and translateY(4px) to clear and neutral."
+      },
+      {
+        "name": "permission-thumb",
+        "value": "transform .15s",
+        "purpose": "Checked thumb translates 16px."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}",
+        "purpose": "Existing global motion override."
+      },
+      {
+        "name": "route-entry",
+        "value": "duration .2s; ease [.16,1,.3,1]; opacity .85 to 1; y 8px to 0",
+        "purpose": "Motion route transition; skipped under OS/app reduced motion."
+      },
+      {
+        "name": "thumbnail-hover",
+        "value": "transform .25s cubic-bezier(.16,1,.3,1); scale(1.04)",
+        "purpose": "Media thumbnail hover."
+      },
+      {
+        "name": "resource-gauge",
+        "value": "stroke-dasharray .6s cubic-bezier(.16,1,.3,1)",
+        "purpose": "Measured resource ring update."
+      },
+      {
+        "name": "project-progress",
+        "value": "width .5s cubic-bezier(.16,1,.3,1)",
+        "purpose": "Linked-task completion meter."
+      },
+      {
+        "name": "chart-entry",
+        "value": "550ms status and project bars; 650ms development area",
+        "purpose": "Recharts animation disabled under OS/app reduced motion."
+      },
+      {
+        "name": "about-mark",
+        "value": "transform .45s cubic-bezier(.16,1,.3,1)",
+        "purpose": "Hover perspective tilt on About mark."
+      },
+      {
+        "name": "app-reduced-motion",
+        "value": ".reduce-motion *{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}",
+        "purpose": "In-app preference; Motion/Recharts also receive the reduced setting."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "desktop-compact",
+        "value": "1250px"
+      },
+      {
+        "name": "desktop-narrow",
+        "value": "1050px"
+      }
+    ],
+    "reviewCoverage": {
+      "disposition": "ship within captured Mac scope",
+      "captureCount": 11,
+      "version": "0.3.1",
+      "mediaGridVersion": "0.3.0",
+      "visuallyUnvalidated": [
+        "alternate accent combinations",
+        "alternate density",
+        "motion timing",
+        "small windows",
+        "Windows",
+        "Linux"
+      ],
+      "targetedFunctionalChecks": [
+        "native video advanced two seconds",
+        "agent preview acknowledgement"
+      ],
+      "setupGaps": [
+        "Google Desktop OAuth client and enabled APIs",
+        "Claude signed out",
+        "API keys not configured",
+        "update release source not configured"
+      ],
+      "evidence": [
+        "evidence/*-v031.png",
+        "evidence/media-grid-v030.png"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "description": "Deliberate save or apply action.",
+      "html": "<button class=\"ds-primary\">Save preferences</button>",
+      "css": ".ds-primary{font-family:'Inter Variable',sans-serif;font-size:14px;line-height:1.5;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer;white-space:nowrap;transition:background-color .16s,border-color .16s,color .16s,transform .12s;background:var(--accent);color:#17191d;border-color:var(--accent);font-weight:600}.ds-primary:hover{background:#ffc08e;border-color:#ffc08e}.ds-primary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.ds-primary:disabled{opacity:.48;cursor:default}@media(prefers-reduced-motion:reduce){.ds-primary{animation:none!important;transition:none!important}} .ds-primary:active:not(:disabled){transform:translateY(1px)}",
+      "refersTo": "button-primary"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "description": "Ordinary workspace action.",
+      "html": "<button class=\"ds-secondary\">Sync sources</button>",
+      "css": ".ds-secondary{font-family:'Inter Variable',sans-serif;font-size:14px;line-height:1.5;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer;white-space:nowrap;transition:background-color .16s,border-color .16s,color .16s,transform .12s;color:var(--text);background:var(--surface)}.ds-secondary:hover{background:#30353e;border-color:#58616e}.ds-secondary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.ds-secondary:disabled{opacity:.48;cursor:default}@media(prefers-reduced-motion:reduce){.ds-secondary{animation:none!important;transition:none!important}} .ds-secondary:active:not(:disabled){transform:translateY(1px)}",
+      "refersTo": "button-secondary"
+    },
+    {
+      "name": "Settings Field",
+      "kind": "input",
+      "description": "Stacked setting label and editable value.",
+      "html": "<label class=\"ds-field\">Display name<input value=\"Sanju\" /></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:8px;max-width:390px;color:var(--muted);font:12px 'Inter Variable',sans-serif;margin:22px 0}.ds-field input{font:13px 'Inter Variable',sans-serif;color:var(--text);background:#1b1e23;border:1px solid var(--border);border-radius:6px;padding:8px 10px;min-width:0;caret-color:var(--accent)}.ds-field input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-field{animation:none!important;transition:none!important}}",
+      "refersTo": "input"
+    },
+    {
+      "name": "Selected Navigation",
+      "kind": "nav",
+      "description": "Warm selected route in the graphite rail.",
+      "html": "<button class=\"ds-nav\" aria-current=\"page\">Today</button>",
+      "css": ".ds-nav{font-family:'Inter Variable',sans-serif;font-size:14px;line-height:1.5;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer;white-space:nowrap;transition:background-color .16s,border-color .16s,color .16s,transform .12s;justify-content:flex-start;padding:10px 13px;font-size:13px;background:color-mix(in srgb,var(--accent) 16%,var(--rail));color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,var(--border))}.ds-nav:hover{background:#20242a}.ds-nav:focus-visible{outline:2px solid var(--accent);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-nav{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "description": "Small status label in work rows.",
+      "html": "<span class=\"ds-chip\">Suggested follow-ups</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;padding:3px 7px;background:#303640;color:#c7cfdb;font:500 10px 'Inter Variable',sans-serif;border-radius:4px;white-space:nowrap}@media(prefers-reduced-motion:reduce){.ds-chip{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Inline Note",
+      "kind": "card",
+      "description": "Flat information container without elevation.",
+      "html": "<div class=\"ds-note\">Initial imported snapshots remain available while setup is pending.</div>",
+      "css": ".ds-note{padding:12px 14px;margin:15px 0;background:#252b32;border:1px solid #3d4652;border-radius:6px;font:11px/1.7 'Inter Variable',sans-serif;color:#bec7d3}@media(prefers-reduced-motion:reduce){.ds-note{animation:none!important;transition:none!important}}"
+    },
+    {
+      "name": "Profile Trigger",
+      "kind": "button",
+      "description": "Full-width sidebar identity button, shown open.",
+      "html": "<button class=\"ds-profile\" aria-expanded=\"true\"><span>S</span><div>Sanju<small>Personal + team workspace</small></div></button>",
+      "css": ".ds-profile{font-family:'Inter Variable',sans-serif;font-size:14px;line-height:1.5;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--border);border-radius:6px;padding:7px 11px;cursor:pointer;white-space:nowrap;transition:background-color .16s,border-color .16s,color .16s,transform .12s;width:100%;text-align:left;justify-content:flex-start;white-space:normal;padding:9px 5px;gap:9px;background:#282c33;border-color:#414853;color:var(--text);font-size:12px}.ds-profile>span{background:#343c47;border:1px solid #566171;width:31px;height:31px;border-radius:50%;display:grid;place-items:center}.ds-profile>div{flex:1;min-width:0}.ds-profile small{display:block;font-size:10px;color:var(--muted)}.ds-profile:hover{background:#282c33;border-color:#414853}.ds-profile:focus-visible{outline:2px solid var(--accent);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-profile{animation:none!important;transition:none!important}} .ds-profile:active:not(:disabled){transform:translateY(1px)}"
+    },
+    {
+      "name": "Account Menu",
+      "kind": "custom",
+      "description": "Existing Radix account destination overlay.",
+      "html": "<div class=\"ds-menu\" role=\"menu\" aria-label=\"Account\"><div class=\"ds-menu-label\">Sanju</div><div class=\"ds-menu-separator\" role=\"separator\"></div><div role=\"menuitem\" tabindex=\"0\">Profile &amp; account</div><div role=\"menuitem\" tabindex=\"-1\">Permissions &amp; privacy</div><div role=\"menuitem\" tabindex=\"-1\">App preferences</div><div role=\"menuitem\" tabindex=\"-1\">Connections &amp; integrations</div></div>",
+      "css": ".ds-menu{min-width:235px;background:#242830;border:1px solid #535d6b;border-radius:9px;padding:7px;box-shadow:0 12px 32px #0007;color:var(--text);font:12px/1.5 'Inter Variable',sans-serif}.ds-menu [role=menuitem]{padding:10px 11px;border-radius:5px;outline:0;cursor:pointer}.ds-menu [role=menuitem]:hover,.ds-menu [role=menuitem]:focus-visible{background:#483526;color:#ffceaa}.ds-menu-label{color:var(--muted)}.ds-menu-separator{height:1px;background:var(--border);margin:4px 0}@media(prefers-reduced-motion:reduce){.ds-menu,.ds-menu-label,.ds-menu-separator{animation:none!important;transition:none!important}}",
+      "refersTo": "profile-menu"
+    },
+    {
+      "name": "Media Tile",
+      "kind": "card",
+      "refersTo": "media-thumbnail",
+      "description": "Thumbnail placeholder and filename hierarchy used by the media grid.",
+      "html": "<article class=\"ds-media\"><button aria-label=\"Preview model\"><svg width=\"32\" height=\"32\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\"><path d=\"m12 3 8 4v10l-8 4-8-4V7Z M4 7l8 4 8-4 M12 11v10\"/></svg></button><strong>assembly.glb</strong><small>3D model \u00b7 local file</small></article>",
+      "css": ".ds-media{max-width:220px;color:var(--text);font:12px/1.5 \"Inter Variable\",sans-serif;border-bottom:1px solid var(--border);padding-bottom:16px}.ds-media button{display:grid;place-items:center;width:100%;height:135px;background:#20252c;color:var(--muted);border:1px solid var(--border);border-radius:8px;margin-bottom:11px;cursor:pointer}.ds-media button:hover{border-color:var(--accent)}.ds-media button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.ds-media small{display:block;font-size:10px;color:var(--muted);margin-top:7px}"
+    },
+    {
+      "name": "Project Completion",
+      "kind": "custom",
+      "description": "Linked-task counts and completion meter; sample values demonstrate the component only.",
+      "html": "<section class=\"ds-project\"><strong>Linked tasks completed</strong><div class=\"ds-meter\" role=\"meter\" aria-label=\"Example task completion\" aria-valuemin=\"0\" aria-valuemax=\"4\" aria-valuenow=\"2\"><span></span></div><small>2 Done / 4 linked \u00b7 example</small></section>",
+      "css": ".ds-project{color:var(--text);font:12px/1.5 \"Inter Variable\",sans-serif;border-block:1px solid var(--border);padding:25px 0}.ds-meter{height:7px;background:#303641;border-radius:5px;overflow:hidden;margin:16px 0 22px}.ds-meter span{display:block;width:50%;height:100%;background:var(--ok);border-radius:5px;transition:width .5s cubic-bezier(.16,1,.3,1)}.ds-project small{color:var(--muted);font-size:10px}@media(prefers-reduced-motion:reduce){.ds-meter span{transition:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Evidence handoff",
+    "overview": "GOTEET is a quiet, dense personal and team desktop. Graphite surfaces, pale text, compact Inter typography and a default apricot accent keep evidence, work records and deliberate actions easy to scan. The expanded system preserves the original identity while accommodating user-selected mint, blue and lavender accents.\n\nThe shared shell places navigation, the active workspace and an optional assistant side by side. Flat rows and tonal boundaries carry the hierarchy. Charts, measured gauges, media thumbnails and linked project summaries bring richer information into the same restrained visual language; motion marks navigation and state changes.",
+    "keyCharacteristics": [
+      "Graphite tonal layers and restrained accent selection states.",
+      "Compact Inter typography, flat rows and visible source context.",
+      "Data graphics derived from records, with readable legends and empty states.",
+      "Media-led previews and familiar native desktop actions.",
+      "Profile and preferences anchored to the sidebar identity."
+    ],
+    "rules": [
+      {
+        "name": "The Intentional Accent Rule",
+        "body": "Use the selected accent for navigation, focus and deliberate actions; preserve distinct status colors and readable neutral context.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "**Do** preserve graphite surfaces, compact Inter hierarchy and the default apricot identity.",
+      "**Do** honor the selected accent while retaining distinct status and chart meanings.",
+      "**Do** pair graphics with counts, labels, coverage and real empty states.",
+      "**Do** keep keyboard focus and OS/app reduced-motion behavior consistent.",
+      "**Do** extend established rows, tabs, fields, previews and account controls."
+    ],
+    "donts": [
+      "**Don't** replace flat work rows with nested decorative cards.",
+      "**Don't** copy illustrative preview content into evidence claims.",
+      "**Don't** present source inspection or Mac captures as cross-platform visual validation.",
+      "**Don't** use authentication or update setup gaps as evidence of visual defects."
+    ]
+  }
+}

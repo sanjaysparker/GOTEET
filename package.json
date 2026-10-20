@@ -1,0 +1,74 @@
+{
+  "name": "goteet-desktop",
+  "version": "0.3.1",
+  "private": true,
+  "description": "GOTEET agentic work assistant",
+  "author": "DroneOS",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "desktop": "electron .",
+    "package:mac": "electron-builder --mac dir --arm64 --publish never",
+    "package:win": "electron-builder --win nsis --publish never",
+    "package:linux": "electron-builder --linux AppImage --publish never"
+  },
+  "build": {
+    "appId": "in.droneos.goteet",
+    "productName": "GOTEET",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**",
+      "dist/**"
+    ],
+    "extraResources": [
+      {
+        "from": "payload",
+        "to": "payload"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "identity": null,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "GOTEET records audio only when you press the microphone control to dictate a work request."
+      },
+      "icon": "desktop/assets/icon.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "desktop/assets/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Office",
+      "icon": "desktop/assets/icon.png"
+    }
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@radix-ui/react-dropdown-menu": "^2.2.1",
+    "@radix-ui/react-switch": "^1.4.1",
+    "@radix-ui/react-tabs": "^1.2.1",
+    "lucide-react": "^1.60.0",
+    "motion": "^14.4.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "recharts": "^3.10.1",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "electron": "^44.9.2",
+    "electron-builder": "^26.15.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
+  },
+  "type": "module"
+}

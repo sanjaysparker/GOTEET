@@ -1,0 +1,5 @@
+#!/bin/sh
+if [ -x /Applications/GOTEET.app/Contents/Resources/payload/workmate-api/workmate-api ]; then
+ exec /Applications/GOTEET.app/Contents/Resources/payload/workmate-api/workmate-api --cli "$@"
+fi
+exec /Users/sanju/GOTEET/.venv312/bin/python /Users/sanju/GOTEET/workmate_client.py "$@"
