@@ -1,6 +1,6 @@
 import { WorkItemDetails } from './WorkItemDetails';
 import { BrowserPanel } from './BrowserPanel';
-import { PlanningWorkspace } from './PlanningWorkspace';
+import { Roadmap } from './roadmap/Roadmap';
 import { MailPanel } from './MailPanel';
 import { GoogleSetup } from './GoogleSetup';
 import React, { useEffect, useRef, useState } from 'react';
@@ -762,7 +762,7 @@ function App() {
     Today: 'Your day, in focus.',
     Projects: 'A home for every project.',
     Tasks: 'Every issue, one keystroke away.',
-    Timeline: 'Give the work a timeline.',
+    Timeline: 'Your roadmap, on a calendar.',
     'Team chat': 'Keep the conversation close.',
     Concepts: 'Make room for the next idea.',
     Media: 'Everything, in its place.',
@@ -784,7 +784,7 @@ function App() {
     Today: 'A brief built from your work, with evidence behind every next step.',
     Projects: 'Repository activity and project plans together. Statuses are yours to set.',
     Tasks: 'List or board · J/K to move · Enter for details · C to create · ⌘K for everything.',
-    Timeline: 'Set real start and target dates. No inferred deadlines.',
+    Timeline: 'Drag to schedule. Dates are yours to set; nothing is inferred.',
     'Team chat': 'Shared channels, authenticated authors and persistent conversations.',
     Concepts: 'A live space for ideas. Claude and Codex can read and update these through MCP.',
     Media: 'Search file metadata and organise collections without moving the originals.',
@@ -2135,17 +2135,28 @@ function App() {
             />
           )}
           {route === 'Timeline' && (
-            <PlanningWorkspace
+            <Roadmap
               projects={projects.filter(matches)}
               tasks={tasks.filter(matches)}
-              editProject={(p) => openEditor('project', p)}
-              editTask={(t) => openEditor('task', t)}
+              cycles={cycles}
+              insights={insights}
+              owner={owner}
+              openTask={(t) => openEditor('task', t)}
+              openProject={(p) => openEditor('project', p)}
+              createTask={() =>
+                openEditor('task', { project: 'General', status: 'Todo', priority: 'Normal' })
+              }
               createProject={() => openEditor('project')}
-              createTask={(project, status) => openEditor('task', { project, status })}
               saveTask={async (t) => {
                 await api('/api/tasks', t);
                 await refresh();
+                loadAgent();
               }}
+              saveProject={async (p) => {
+                await api('/api/projects', p);
+                await refresh();
+              }}
+              fail={fail}
             />
           )}
           {route === 'Concepts' && (
