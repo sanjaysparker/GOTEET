@@ -588,9 +588,9 @@ footer.statusbar .footer-right {
 .ai-report {
   margin-top: 14px;
   padding: 10px 12px;
-  border-left: 2px solid var(--accent);
+  border: 1px solid var(--line-strong);
   background: var(--surface-2);
-  border-radius: 0 var(--r-panel) var(--r-panel) 0;
+  border-radius: var(--r-panel);
 }
 .ai-report p {
   color: var(--text);
@@ -1228,8 +1228,7 @@ button.wk-line:hover {
   padding: 0 6px;
 }
 .wk-ai-note {
-  border: 1px solid var(--line-strong);
-  border-left: 2px solid var(--accent);
+  border: 1px solid var(--accent-border);
   border-radius: var(--r-ctl);
   background: var(--surface-2);
   padding: 8px 10px;
