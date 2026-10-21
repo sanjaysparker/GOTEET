@@ -26,7 +26,7 @@ This is an MVP, not full Jira/Linear/Mattermost parity. Remote collaboration is 
 
 Python 3.12 is required for the tested voice stack. Create `.venv312`, install `requirements-lock.txt`, then `npm ci && npm run build && npm run desktop`.
 
-The desktop manages its backend lifetime. User state defaults to the OS app-data folder under `GOTEET/workspace`. For development with the current private inventory, set `WORKMATE_HOME=/Users/sanju/GOTEET` before launching. Secrets are not part of the source or distributable. Private inventory is provisioned to this user's app-data folder separately.
+The desktop manages its backend lifetime. User state defaults to the OS app-data folder under `GOTEET/workspace`. For isolated development, set `WORKMATE_HOME` to a separate local directory. Do not use a production workspace for tests. Secrets and private inventory are not part of this repository or the distributable.
 
 `WORKMATE_HOME` overrides the data root. OAuth tokens and client configuration use the OS credential store. The local API listens on a random loopback port with an owner-only runtime file. The app starts without Google login so local work remains usable while OAuth is being configured.
 
@@ -57,3 +57,37 @@ Daily and Friday weekly report automations are attached to the originating Codex
 See OPEN_SOURCE_REVIEW.md for the repository comparison and source/coverage limitations. See VERIFICATION.md for measured build and integration evidence.
 
 Profile & settings is opened from the bottom-left account button. Permissions are enforced by the backend. File attachments can be added to saved tasks/projects/concepts and shared chat channels. System view shows measured hardware/resource state and available CLI tools.
+
+### Single-copy Mac installation
+
+Keep `/Applications/GOTEET.app` as the only installed app. After each package/install cycle and successful native verification, run `npm run cleanup:mac`. This checks the running installed version before deleting older/equal GOTEET bundles under `release/`, and refuses newer or running staging bundles. Source and workspace data are preserved.
+
+## Fresh checkout (macOS Apple Silicon)
+
+Requirements: Git, Node.js 22 or newer, npm, Python 3.12 and Xcode Command Line Tools. Google integration requires your own OAuth desktop client; the local app runs without it.
+
+```sh
+python3.12 -m venv .venv312
+.venv312/bin/python -m pip install -r requirements-lock.txt
+npm ci
+.venv312/bin/python -m pytest -q
+npm run build
+npm run desktop
+```
+
+To package the native app:
+
+```sh
+.venv312/bin/python scripts/package_backend.py
+npm run package:mac
+```
+
+Quit GOTEET, copy `release/mac-arm64/GOTEET.app` to `/Applications/GOTEET.app`, launch it and verify the UI, then run `npm run cleanup:mac`. Do not run the release staging copy as a second installation. Windows/Linux builds need native dependency validation on their respective OS; the current Python lock was verified on macOS ARM64.
+
+## Development status
+
+v0.5.1 includes the calendar/board planner, formatted reports, task completion controls, Drive folder navigation, document readers and theme contrast repairs. App-activity sampling is an unfinished backend feature, disabled by default; its settings panel and reporting integration are not yet complete. Drive content viewing still requires the relevant Google consent.
+
+## Source licenses
+
+The distribution includes an AGPL-3.0 Plane date helper; see `src/vendor/plane-dates.ts`, `public/licenses/plane-AGPL-3.0.txt` and `READER_REFERENCES.md`. Preserve its attribution and comply with the applicable source-distribution terms when redistributing the combined app. PDF.js license is also included in `public/licenses/`.

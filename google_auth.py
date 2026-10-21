@@ -16,7 +16,7 @@ PENDING={}
 SYNC_LOCK=threading.Lock()
 SCOPES={
  'gmail':'https://www.googleapis.com/auth/gmail.readonly',
- 'drive':'https://www.googleapis.com/auth/drive.metadata.readonly',
+ 'drive':'https://www.googleapis.com/auth/drive.readonly',
  'calendar':'https://www.googleapis.com/auth/calendar.readonly',
  'contacts':'https://www.googleapis.com/auth/contacts.readonly',
  'google_tasks':'https://www.googleapis.com/auth/tasks.readonly'}

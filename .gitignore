@@ -18,3 +18,11 @@ evidence/
 models/
 
 .pytest_cache/
+
+.env
+.env.*
+!.env.example
+*client_secret*.json
+credentials*.json
+*.pem
+*.key

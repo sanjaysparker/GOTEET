@@ -5,6 +5,7 @@ import settings
 import io
 from functools import lru_cache
 EXPLICIT_PREVIEWS=set()
+CLOUD_PREVIEWS={}
 
 FORMATS={
  '.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp',
@@ -20,10 +21,15 @@ FORMATS={
 
 def indexed(path):
     settings.require('media_preview_enabled')
+    if path in CLOUD_PREVIEWS:
+        settings.require('google_enabled')
+        import google_auth
+        token=google_auth.read_secret('google-tokens') or {}
+        if not token or token.get('profile',{}).get('sub')!=CLOUD_PREVIEWS[path]:raise PermissionError('Reconnect the Google account that opened this file.')
     record=next((f for f in engine.read_json('inventory.json').get('local',{}).get('files',[]) if f.get('path')==path),None)
     if not record:
-        if path not in EXPLICIT_PREVIEWS:raise PermissionError('Choose a file from the media library or Files panel')
-        settings.require('file_browser_enabled')
+        if path not in EXPLICIT_PREVIEWS and path not in CLOUD_PREVIEWS:raise PermissionError('Choose a file from the media library or Files panel')
+        if path not in CLOUD_PREVIEWS:settings.require('file_browser_enabled')
     file=Path(path)
     if not file.is_absolute() or not file.is_file():raise ValueError('This file is no longer available. Refresh your library.')
     if file.is_symlink() or any(p.is_symlink() for p in file.parents) or file.resolve()!=file:
@@ -38,7 +44,11 @@ def info(path):
     if mime=='text/plain':
         with file.open('rb') as handle:content=handle.read(200001)
         result.update(text=content[:200000].decode('utf-8',errors='replace'),truncated=len(content)>200000)
-    if file.suffix.lower() in {'.docx','.pptx','.xlsx'}:
+    if file.suffix.lower()=='.docx':
+        from document_reader import read_docx
+        result.update(kind='document',blocks=read_docx(file))
+        return result
+    if file.suffix.lower() in {'.pptx','.xlsx'}:
         import zipfile
         import xml.etree.ElementTree as ET
         parts=[];used=0

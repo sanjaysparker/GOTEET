@@ -3,7 +3,7 @@ import json
 from collector import DATA
 DEFAULTS={'display_name':'Sanju','timezone':'Asia/Kolkata','start_view':'Today',
  'github_enabled':True,'local_index_enabled':True,'google_enabled':True,'voice_enabled':True,'agent_enabled':True,'attachments_enabled':True,'media_preview_enabled':True,'file_browser_enabled':True,'updates_repository':'',
- 'role':'','organisation':'','location':'','website':'','bio':'','avatar_revision':'','accent':'#ffab65','density':'compact','reduce_motion':False}
+ 'role':'','organisation':'','location':'','website':'','bio':'','avatar_revision':'','activity_enabled':False,'theme':'graphite','accent':'#ffab65','density':'compact','reduce_motion':False}
 
 def get():
     path=DATA/'settings.json'
@@ -21,7 +21,8 @@ def save(value):
     if not current['display_name'].strip():raise ValueError('Enter a display name')
     import re
     if current['updates_repository'] and not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',current['updates_repository']):raise ValueError('Use owner/repository for the update source')
-    if current['accent'] not in {'#ffab65','#8cdbb1','#8fb9ff','#c2b3ff'}:raise ValueError('Choose an available accent colour')
+    if not re.fullmatch(r'#[0-9a-fA-F]{6}',current['accent']):raise ValueError('Use a six-digit hex accent colour')
+    if current['theme'] not in {'graphite','midnight','light'}:raise ValueError('Choose an available theme')
     if current['density'] not in {'compact','comfortable'}:raise ValueError('Choose compact or comfortable density')
     if current['website'] and not current['website'].startswith('https://'):raise ValueError('Use an HTTPS website address')
     from zoneinfo import ZoneInfo

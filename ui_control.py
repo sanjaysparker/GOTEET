@@ -4,7 +4,7 @@ import time
 import uuid
 from collections import deque
 
-ROUTES={'Today','Projects','Tasks','Timeline','Team chat','Concepts','Media','Files','Reports','Connections','Models','Agents','System','Settings'}
+ROUTES={'Today','Projects','Tasks','Timeline','Team chat','Concepts','Media','Files','Reports','Connections','Mail','Models','Agents','System','Settings'}
 LOCK=threading.Lock()
 COMMANDS=deque(maxlen=100)
 STATE={}

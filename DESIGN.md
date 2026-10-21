@@ -239,3 +239,8 @@ The review disposition is ship for the 11 captured Mac screens recorded in PRODU
 - **Don't** copy illustrative preview content into evidence claims.
 - **Don't** present source inspection or Mac captures as cross-platform visual validation.
 - **Don't** use authentication or update setup gaps as evidence of visual defects.
+
+## Reader and appearance extension — 0.5.0
+Preserve GOTEET's compact Inter desktop workspace and apricot identity. Paper documents use a white reading surface independently of shell theme. New toolbars wrap but controls retain intrinsic widths. Mail uses a message-list/reading-pane layout. Navigation and reading transitions remain short and respect reduced motion. The assistant is a bounded flex column: only its body scrolls; composer stays visible.
+
+Shell themes: Graphite (existing palette), Midnight (#111827 background, #0c1220 rail, #192235 surface, #24324b elevation, #394762 border, #f1f5fb text, #b6c3d7 muted), Paper (#f5f4f0 background, #eeede8 rail, #ffffff surface, #e5e7eb elevation, #c7cbd2 border, #202632 text, #505b6b muted). Custom accents are user choices. Preserve semantic danger/success colors. Existing global brand illustration/3D backgrounds remain intentionally dark. No flashing/decorative looping effects.

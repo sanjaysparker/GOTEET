@@ -49,7 +49,7 @@ import diagnostics
 import agent_management
 from collector import DATA, STATE, now
 
-app=FastAPI(title='GOTEET local API',version='0.4.1')
+app=FastAPI(title='GOTEET local API',version='0.5.1')
 TOKEN=os.environ.get('WORKMATE_API_TOKEN') or secrets.token_urlsafe(48)
 INSTANCE=str(uuid.uuid4())
 BASE_URL=''
@@ -95,7 +95,7 @@ def audit(action,actor='desktop'):
     with engine.connect() as c:c.execute('INSERT INTO audit VALUES(?,?,?,?)',(str(uuid.uuid4()),action,actor,now()))
 
 @app.get('/api/health')
-def health():return {'ok':True,'version':'0.4.1','instance':INSTANCE,'pid':os.getpid()}
+def health():return {'ok':True,'version':'0.5.1','instance':INSTANCE,'pid':os.getpid()}
 
 @app.get('/api/snapshot')
 def snapshot(request:Request):
@@ -486,5 +486,48 @@ def main():
         if runtime.exists():
             with contextlib.suppress(Exception):
                 if json.loads(runtime.read_text()).get('instance')==INSTANCE:runtime.unlink()
+
+
+@app.get('/api/mail')
+def mail_list(query:str='',folder:str='INBOX',page:str=''):
+    import mail_reader
+    from fastapi.responses import JSONResponse
+    return JSONResponse(mail_reader.read(query,folder,page),headers={'Cache-Control':'no-store'})
+
+@app.get('/api/mail/{message_id}')
+def mail_message(message_id:str):
+    import mail_reader
+    from fastapi.responses import JSONResponse
+    return JSONResponse(mail_reader.read(message_id=message_id),headers={'Cache-Control':'no-store'})
+
+@app.post('/api/drive/preview')
+def drive_preview(value:dict):
+    import drive_reader
+    return drive_reader.preview(str(value.get('id','')))
+
+@app.get('/api/drive/files')
+def drive_files(parent:str='root',query:str='',page:str='',order:str='name',kind:str='all'):
+    import drive_reader
+    return JSONResponse(drive_reader.listing(parent,query,page,order,kind),headers={'Cache-Control':'no-store'})
+
+@app.get('/api/drive/thumbnail/{file_id}')
+def drive_thumbnail(file_id:str):
+    import drive_reader
+    return JSONResponse(drive_reader.thumbnail(file_id),headers={'Cache-Control':'no-store'})
+
+@app.get('/api/activity')
+def app_activity(days:int=7):
+    import activity_monitor
+    return activity_monitor.summary(days)
+
+@app.post('/api/activity/sample')
+def activity_sample(value:dict):
+    import activity_monitor
+    return activity_monitor.record(value)
+
+@app.post('/api/activity/clear')
+def activity_clear():
+    import activity_monitor
+    return activity_monitor.clear()
 
 if __name__=='__main__':main()

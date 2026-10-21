@@ -42,3 +42,23 @@ Private inventory, SQLite state, OAuth/model credentials and downloaded speech m
 28 tests passed, including identity-only scopes/account selection, pending-state invalidation on logout and HTML escaping on the new callback page. The user completed company Google Workspace authorization; the installed backend confirmed connected status and all five read-only scopes. The callback design was rendered locally for visual inspection; this does not replay OAuth consent. Full workspace isolation per Google identity is not implemented.
 
 Installed 0.4.1 import readback: 85 mail headers (bounded/truncated), 126 Drive metadata records, 0 Calendar events, 0 Contacts and 0 Tasks; no source errors. The callback app-link test was blocked by browser automation security; no workaround was attempted. Manual link click remains unverified.
+
+## 0.5.0 reader and interaction verification — 21 October 2026
+- `python -m pytest -q`: 34 passed, including new HTML/MIME limits, DOCX blocks/tables, Drive scope rejection, cloud account boundary and theme validation.
+- TypeScript/Vite production build passed; existing >500 kB chunk warning remains (PDF and 3D viewers lazy loaded).
+- Installed frozen API reported 0.5.0; new mail and Drive routes are registered before main starts.
+- Live Gmail: first page 20 visible messages / 10 excluded, next-page token present; selected message body 954 characters. Body contents not persisted to verification files.
+- Native PDF UI: two-page local fixture rendered, Next page visibly changed page 1 to 2. Native Word UI exposed heading, paragraph, bold text, table and outline/search controls.
+- Enter in the real assistant field produced “Reading your workspace evidence…” and returned the saved AIGIS project summary. No write steps requested by the verification prompt.
+- AIGIS requested plan applied: one project plus five tasks, all six results done. Dates remain unset; task owner Unassigned.
+- Process inventory: one GOTEET main process. Dock plist contained two recent entries for the same /Applications/GOTEET.app. Orphan multiprocessing helper PID54587 terminated. No second main app was found.
+- Impeccable detector reviewed: retained established Inter intentionally, fixed flagged width transition, added theme palette docs; advisory legacy palette drift remains. No claim of a warning-free audit.
+- Native final interaction checks: Shift+Enter inserted a newline without submission; Enter submitted. Read aloud toggled to Stop reading (pressed), then second click returned to Read aloud (unpressed). These prove UI/state and cancel invocation; no separate audio-loopback measurement was performed.
+- Native Timeline displayed AIGIS Drone GCS under Unscheduled drafts with Set dates. Paper appearance preview exposed legacy pale labels; repaired those labels and assistant prose to use theme text tokens.
+- Drive content consent remains pending; do not report a successful live Drive download until user grants it and the file visibly renders.
+
+## 0.5.1 build — 21 October 2026
+
+Production TypeScript/Vite build passed; 34 Python tests passed; Electron main syntax check passed. Python service freeze and macOS ARM64 packaging passed. Installed API returned 0.5.1 and the native calendar timeline rendered with project/task rows, date controls and completion counts. Read-only source/history credential-pattern scan passed (not a guarantee against all secret formats). Activity monitoring UI/report integration is unfinished and disabled by default. Drive thumbnails depend on Google availability; file content access requires consent.
+
+Native Media verification: Flow+Noise+Modelling.pdf first page rendered inside its library card. Light-theme screenshot exposed a remaining hardcoded search background; changed it to the theme panel token. DOCX/Office card snippets are implemented but not separately visually verified in this build.

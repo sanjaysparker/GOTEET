@@ -1,5 +1,7 @@
-const {app,BrowserWindow,ipcMain,shell,session,dialog,systemPreferences,protocol,clipboard,ShareMenu}=require('electron');
-const {spawn}=require('node:child_process');
+const {app,BrowserWindow,ipcMain,shell,session,dialog,systemPreferences,protocol,clipboard,ShareMenu,powerMonitor}=require('electron');
+const {spawn,execFile}=require('node:child_process');
+const {promisify}=require('node:util');
+const execFileAsync=promisify(execFile);
 const fs=require('node:fs');
 const path=require('node:path');
 app.setName('GOTEET');
@@ -199,3 +201,22 @@ app.whenReady().then(async()=>{
 });
 app.on('before-quit',()=>{closing=true;backend?.kill();});
 app.on('window-all-closed',()=>app.quit());
+
+// Application names only. Never read browser tabs, window titles or typed content.
+let activityTimer,activityBusy=false,activityLast=Date.now();
+app.whenReady().then(()=>{
+ activityTimer=setInterval(async()=>{
+  const current=Date.now(),elapsed=(current-activityLast)/1000;activityLast=current;
+  if(activityBusy||!runtime||process.platform!=='darwin'||elapsed>30||powerMonitor.getSystemIdleTime()>=60)return;
+  activityBusy=true;
+  try{
+   const preferences=await apiRequest('GET','/api/settings');if(!preferences.activity_enabled)return;
+   const front=(await execFileAsync('/usr/bin/lsappinfo',['front'],{timeout:2000})).stdout.trim();
+   if(!/^ASN:0x[0-9a-f]+-0x[0-9a-f]+:$/i.test(front))return;
+   const info=(await execFileAsync('/usr/bin/lsappinfo',['info','-only','name','-only','bundleid',front],{timeout:2000,maxBuffer:16000})).stdout;
+   const name=info.match(/^"([^"]+)"/m)?.[1],bundle=info.match(/bundleID="([^"]+)"/)?.[1]||'';
+   if(name&&!['loginwindow','ScreenSaverEngine'].includes(name))await apiRequest('POST','/api/activity/sample',{app:name,bundle,seconds:elapsed});
+  }catch{}finally{activityBusy=false;}
+ },15000);
+});
+app.on('before-quit',()=>clearInterval(activityTimer));

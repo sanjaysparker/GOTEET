@@ -22,3 +22,20 @@
 - Added reviewed agent actions and portable CLI/19-tool MCP/optional loopback CDP control.
 - Fixed background desktop command processing and frozen voice-worker startup.
 - Installed and verified the unsigned Mac arm64 build; see VERIFICATION.md for measured coverage and remaining setup requirements.
+
+## 0.5.0 — Integrated readers and appearance
+- Dedicated read-only Gmail reader with folders, search, pagination and on-demand body text.
+- Drive contents preview inside GOTEET; native Google documents export as PDF after read-content consent.
+- PDF page/zoom/text controls and semantic DOCX reading with outline, search and tables.
+- Video transport and original-preserving image rotation.
+- Graphite/Midnight/Paper appearance and custom accents; reduced-motion-aware reading transitions.
+- Read aloud toggles Stop; Enter sends, Shift+Enter inserts a newline, IME composition stays intact.
+
+## 0.5.1
+
+- Calendar timeline and status board with existing project/task editors.
+- Drive folders, breadcrumbs and thumbnail browsing.
+- PDF first-page and supported document text previews on library cards.
+- Report formatting, task completion controls and light-theme contrast fixes.
+- Single-copy Mac cleanup command.
+- Activity sampler foundation remains disabled and unfinished.
