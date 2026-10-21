@@ -1,0 +1,2 @@
+importScripts('./cad/occt-import-js.js');
+onmessage=async({data})=>{try{const occt=await occtimportjs({locateFile:path=>'./cad/'+path});const method=data.extension==='brep'?'ReadBrepFile':['igs','iges'].includes(data.extension)?'ReadIgesFile':'ReadStepFile';const result=occt[method](new Uint8Array(data.buffer),{linearUnit:'millimeter',linearDeflectionType:'bounding_box_ratio',linearDeflection:0.002,angularDeflection:0.5});postMessage(result);}catch(error){postMessage({success:false,error:String(error)});}};

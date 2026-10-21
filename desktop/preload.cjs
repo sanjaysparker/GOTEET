@@ -1,5 +1,7 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('workmate',{
+ browser:(action,value)=>ipcRenderer.invoke('browser',action,value),
+ onBrowser:callback=>{const listener=(_event,value)=>callback(value);ipcRenderer.on('browser-state',listener);return()=>ipcRenderer.removeListener('browser-state',listener);},
  copyText:value=>ipcRenderer.invoke('copy-text',value),
  agentAccess:()=>ipcRenderer.invoke('agent-access'),
  profilePhoto:()=>ipcRenderer.invoke('profile-photo'),

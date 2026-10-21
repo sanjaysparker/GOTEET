@@ -6,6 +6,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 app.setName('GOTEET');
 let backend,windowRef,runtime,closing=false;
+const integratedBrowser=require('./browser.cjs').createBrowser(()=>windowRef);
+ipcMain.handle('browser',async(event,action,value)=>{if(!trusted(event))throw Error('Untrusted caller');return integratedBrowser.command(action,value);});
 const repo=path.resolve(__dirname,'..');
 const state=process.env.WORKMATE_HOME||path.join(app.getPath('userData'),'workspace');
 const runtimePath=path.join(state,'data','runtime.json');
@@ -54,7 +56,7 @@ function trusted(event){return event.sender===windowRef?.webContents;}
 async function apiRequest(method,route,value){
  if(!/^\/api\/[a-zA-Z0-9_/-]+(?:\?[^#\s]*)?$/.test(route)||!['GET','POST'].includes(method))throw new Error('Unsupported API request');
  const response=await fetch(runtime.url+route,{method,headers:{'Authorization':'Bearer '+runtime.token,'Content-Type':'application/json'},body:method==='POST'?JSON.stringify(value||{}):undefined});
- const result=await response.json();if(!response.ok)throw new Error(result.detail||'The request failed');return result;
+ let result;try{result=await response.json();}catch{throw new Error('The local service returned an unexpected response (HTTP '+response.status+'). Please retry or restart GOTEET.');}if(!response.ok)throw new Error(result.detail||'The request failed');return result;
 }
 ipcMain.handle('api',async(event,method,route,value)=>{if(!trusted(event))throw new Error('Untrusted caller');return apiRequest(method,route,value);});
 ipcMain.handle('preview',async(event,file)=>{
@@ -131,10 +133,12 @@ ipcMain.handle('audio',async(event,bytes)=>{
  const d=await r.json();if(!r.ok)throw new Error(d.detail);return d;
 });
 ipcMain.handle('external',async(event,url)=>{
- if(!trusted(event))return;
- const parsed=new URL(url);if(!['https:','http:'].includes(parsed.protocol))throw new Error('Unsupported link');
- if(parsed.protocol==='http:'&&!['localhost','127.0.0.1'].includes(parsed.hostname))throw new Error('Use HTTPS for external services');
- await shell.openExternal(url);
+ if(!trusted(event))throw Error('Untrusted caller');
+ const parsed=new URL(url);
+ if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error('Use an HTTPS link');
+ // Google's installed-app consent must run in the system browser.
+ if(parsed.hostname==='accounts.google.com'){await shell.openExternal(parsed.href);return;}
+ await integratedBrowser.open(parsed.href);
 });
 ipcMain.handle('reveal',async(event,file)=>{
  if(!trusted(event))return;
@@ -193,13 +197,13 @@ app.whenReady().then(async()=>{
    const granted=process.platform==='darwin'?await systemPreferences.askForMediaAccess('microphone'):true;callback(granted);
   });
   windowRef=new BrowserWindow({width:1450,height:940,minWidth:980,minHeight:680,title:'GOTEET',backgroundColor:'#17191d',titleBarStyle:process.platform==='darwin'?'hiddenInset':'default',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
-  windowRef.webContents.setWindowOpenHandler(({url})=>{if(url.startsWith('https://'))shell.openExternal(url);return {action:'deny'};});
+  windowRef.webContents.setWindowOpenHandler(({url})=>{if(url.startsWith('https://'))integratedBrowser.open(url).catch(()=>{});return {action:'deny'};});
   windowRef.webContents.on('will-navigate',(event)=>event.preventDefault());
   await windowRef.loadFile(path.join(repo,'dist/index.html'));
   if(process.env.WORKMATE_SCREENSHOT)await windowRef.webContents.capturePage().then(image=>fs.writeFileSync(process.env.WORKMATE_SCREENSHOT,image.toPNG()));
  }catch(error){dialog.showErrorBox('GOTEET could not open',error.message);app.quit();}
 });
-app.on('before-quit',()=>{closing=true;backend?.kill();});
+app.on('before-quit',()=>{closing=true;integratedBrowser.close();backend?.kill();});
 app.on('window-all-closed',()=>app.quit());
 
 // Application names only. Never read browser tabs, window titles or typed content.

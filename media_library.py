@@ -14,7 +14,7 @@ FORMATS={
  '.mp3':'audio/mpeg','.wav':'audio/wav','.ogg':'audio/ogg','.m4a':'audio/mp4',
  '.flac':'audio/flac','.aac':'audio/aac', '.pdf':'application/pdf',
  '.txt':'text/plain','.md':'text/plain','.csv':'text/plain','.log':'text/plain',
- '.stl':'model/stl','.obj':'model/obj','.glb':'model/gltf-binary',
+ '.step':'model/step','.stp':'model/step','.iges':'model/iges','.igs':'model/iges','.brep':'model/brep','.stl':'model/stl','.obj':'model/obj','.glb':'model/gltf-binary',
  '.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  '.pptx':'application/vnd.openxmlformats-officedocument.presentationml.presentation',
  '.xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}

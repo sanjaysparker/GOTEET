@@ -1,6 +1,6 @@
 {
   "name": "goteet-desktop",
-  "version": "0.5.1",
+  "version": "0.5.3",
   "private": true,
   "description": "GOTEET agentic work assistant",
   "author": "DroneOS",
@@ -12,7 +12,8 @@
     "package:mac": "electron-builder --mac dir --arm64 --publish never",
     "package:win": "electron-builder --win nsis --publish never",
     "package:linux": "electron-builder --linux AppImage --publish never",
-    "cleanup:mac": ".venv312/bin/python scripts/cleanup_mac_bundles.py"
+    "cleanup:mac": ".venv312/bin/python scripts/cleanup_mac_bundles.py",
+    "prebuild": "node scripts/prepare_cad.cjs"
   },
   "build": {
     "appId": "in.droneos.goteet",
@@ -63,6 +64,7 @@
     "@radix-ui/react-tabs": "^1.2.1",
     "lucide-react": "^1.60.0",
     "motion": "^14.4.0",
+    "occt-import-js": "^0.0.23",
     "pdfjs-dist": "^6.4.299",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

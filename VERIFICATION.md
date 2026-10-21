@@ -62,3 +62,12 @@ Installed 0.4.1 import readback: 85 mail headers (bounded/truncated), 126 Drive 
 Production TypeScript/Vite build passed; 34 Python tests passed; Electron main syntax check passed. Python service freeze and macOS ARM64 packaging passed. Installed API returned 0.5.1 and the native calendar timeline rendered with project/task rows, date controls and completion counts. Read-only source/history credential-pattern scan passed (not a guarantee against all secret formats). Activity monitoring UI/report integration is unfinished and disabled by default. Drive thumbnails depend on Google availability; file content access requires consent.
 
 Native Media verification: Flow+Noise+Modelling.pdf first page rendered inside its library card. Light-theme screenshot exposed a remaining hardcoded search background; changed it to the theme panel token. DOCX/Office card snippets are implemented but not separately visually verified in this build.
+
+## 0.5.3 — Google Drive setup and README media
+
+- `npm run build` passes; `pytest -q`: 36 passed.
+- Regression coverage exercises authenticated Drive listing and thumbnail endpoints as JSON responses; callback only schedules automatic Drive import when requested and granted.
+- Fixed missing module-level JSONResponse import causing Drive HTTP 500 errors. Desktop now reports non-JSON API failures without exposing raw server content.
+- Primary Google sign-in requests identity plus Drive readonly, disclosed in Connections. Existing sessions retain a direct Enable Drive previews button. No Google consent was granted by automation.
+- README includes actual previously verified native STEP solid/wireframe screenshots and an authored banner/architecture diagram.
+- Native 0.5.3 recheck blocked by locked Mac. Integrated browser content visual verification remains unresolved; loaded page title alone is not proof of rendering.

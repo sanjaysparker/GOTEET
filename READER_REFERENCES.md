@@ -17,3 +17,7 @@ PDF.js 6.4.299 is integrated and lazy-loaded. Apache 2.0 license ships at `dist/
 Drive: native Google docs/sheets/slides export to PDF; supported binary files open in the shared viewer. Maximum 50 MB per preview; private cache capped at 500 MB. No cloud writes. File contents require `drive.readonly` consent. Existing metadata snapshots remain distinguishable from downloaded contents.
 
 Appearance: Graphite, Midnight and Paper themes, four accent presets/custom color, density, reduced-motion preference. Existing Inter typography deliberately retained despite generic-font detector warning because it is the established desktop design. Imported mail is plain text with remote images/scripts suppressed; sensitive-subject exclusions remain. These exclusions are best-effort subject matching, not a classifier guarantee.
+
+## CAD import in 0.5.3
+
+STEP/IGES/BREP conversion uses [occt-import-js 0.0.23](https://github.com/kovacsv/occt-import-js), under LGPL-2.1, with its OpenCascade dependencies. `scripts/prepare_cad.cjs` copies the runtime and license notices from the installed npm package into the app on build. Worker conversion is bounded to 25 MB and 30 seconds. The README screenshots use the upstream simple-basic-cube fixture. Three.js renders the result without rewriting source geometry. Storytold remains a concept reference, not the document rendering engine.

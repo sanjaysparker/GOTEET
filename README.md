@@ -1,5 +1,30 @@
 # GOTEET MVP
 
+![GOTEET — your work, your files, one desktop workspace](docs/media/banner.svg)
+
+## Inside the app
+
+Actual desktop captures using a public cube fixture. CAD previews preserve the original file.
+
+| Solid CAD preview | Wireframe inspection |
+| --- | --- |
+| ![STEP cube inside GOTEET](docs/media/cad-viewer.png) | ![CAD wireframe and grid](docs/media/cad-wireframe.png) |
+
+STEP, IGES and BREP use OpenCascade via `occt-import-js`; STL, OBJ and embedded GLB use Three.js. View controls include fit, front, top, right, wireframe and grid. Native authoring formats are not universally supported.
+
+```mermaid
+flowchart LR
+  A[Tasks & projects] --> W[GOTEET workspace]
+  B[Google Drive & mail] --> W
+  C[Local files & media] --> W
+  W --> P[In-app readers & CAD]
+  W --> R[Reports & timelines]
+  W --> AI[Assistant · CLI · MCP]
+```
+
+Google sign-in requests identity and read-only Drive access. After granted consent, Drive metadata imports automatically; other Google sources remain optional. Google may require administrator approval or show testing-mode notices.
+
+
 An integrated desktop work assistant following the requested spark-aigis-maker architecture: Electron + React/Vite + FastAPI, with SQLite. First packaging target is macOS arm64. Windows and Linux targets are defined but must be built and tested on those systems.
 
 ## Included

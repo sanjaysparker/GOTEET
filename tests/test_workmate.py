@@ -341,3 +341,29 @@ def test_google_completion_page_escapes_identity():
     assert 'a&amp;b@example.test' in page
     assert 'goteet://account' in page
     assert 'Sign-in cancelled.' in google_auth.completion_page(cancelled=True)
+
+def test_drive_routes_return_json(workspace,monkeypatch):
+    import drive_reader
+    monkeypatch.setattr(drive_reader,'listing',lambda *args:{'files':[],'next':''})
+    monkeypatch.setattr(drive_reader,'thumbnail',lambda file_id:{'url':'data:image/png;base64,eA=='})
+    with TestClient(api.app) as client:
+        for route in ['/api/drive/files','/api/drive/thumbnail/sample']:
+            r=client.get(route,headers=headers())
+            assert r.status_code==200
+            assert isinstance(r.json(),dict)
+            assert r.headers['cache-control']=='no-store'
+
+def test_google_callback_auto_drive_only_after_grant(workspace,monkeypatch):
+    import google_auth
+    calls=[]
+    monkeypatch.setattr(google_auth,'finish',lambda *args:{'name':'Demo'})
+    monkeypatch.setattr(google_auth,'setup_drive',lambda:calls.append('drive'))
+    monkeypatch.setitem(google_auth.PENDING,'test-auto',{'sources':['drive']})
+    with TestClient(api.app) as client:
+        monkeypatch.setattr(google_auth,'status',lambda:{'sources':{'drive':False}})
+        assert client.get('/api/google/callback?code=fake&state=test-auto').status_code==200
+        assert calls==[]
+        monkeypatch.setattr(google_auth,'status',lambda:{'sources':{'drive':True}})
+        assert client.get('/api/google/callback?code=fake&state=test-auto').status_code==200
+        assert calls==['drive']
+    google_auth.PENDING.pop('test-auto',None)

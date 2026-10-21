@@ -30,8 +30,8 @@ import threading
 import uuid
 import hashlib
 import httpx
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.responses import Response
 import uvicorn
@@ -49,7 +49,7 @@ import diagnostics
 import agent_management
 from collector import DATA, STATE, now
 
-app=FastAPI(title='GOTEET local API',version='0.5.1')
+app=FastAPI(title='GOTEET local API',version='0.5.3')
 TOKEN=os.environ.get('WORKMATE_API_TOKEN') or secrets.token_urlsafe(48)
 INSTANCE=str(uuid.uuid4())
 BASE_URL=''
@@ -95,7 +95,7 @@ def audit(action,actor='desktop'):
     with engine.connect() as c:c.execute('INSERT INTO audit VALUES(?,?,?,?)',(str(uuid.uuid4()),action,actor,now()))
 
 @app.get('/api/health')
-def health():return {'ok':True,'version':'0.5.1','instance':INSTANCE,'pid':os.getpid()}
+def health():return {'ok':True,'version':'0.5.3','instance':INSTANCE,'pid':os.getpid()}
 
 @app.get('/api/snapshot')
 def snapshot(request:Request):
@@ -439,16 +439,30 @@ def transcribe(audio:UploadFile=File(...)):
 @app.post('/api/google/configure')
 def google_config(value:dict):return google_auth.configure(value)
 
+@app.post('/api/google/check')
+def google_check():
+    settings.require('google_enabled')
+    try:
+        token=google_auth.access_token()
+        response=httpx.get('https://openidconnect.googleapis.com/v1/userinfo',headers={'Authorization':'Bearer '+token},timeout=15)
+        if response.status_code!=200:return {'verified':False,'message':'Google could not verify this session. Reconnect the account in GOTEET.'}
+        return {'verified':True,'message':'Google connection verified successfully. Your account remains signed in.'}
+    except Exception:
+        return {'verified':False,'message':'Unable to verify Google right now. Check your network and keychain access, then retry; reconnect if access was revoked.'}
+
 @app.post('/api/google/start')
 def google_start(value:dict):
     settings.require('google_enabled')
     return google_auth.start(BASE_URL+'/api/google/callback',value.get('workspace',False),value.get('sources'))
 
 @app.get('/api/google/callback',response_class=HTMLResponse)
-def google_callback(code:str='',state:str='',error:str=''):
+def google_callback(background_tasks:BackgroundTasks,code:str='',state:str='',error:str=''):
     if error:return HTMLResponse(google_auth.completion_page(cancelled=True),headers={'Cache-Control':'no-store'})
+    requested=google_auth.PENDING.get(state,{}).get('sources',[])
     try:profile=google_auth.finish(code,state)
     except Exception:return HTMLResponse(google_auth.completion_page(failed=True),status_code=400,headers={'Cache-Control':'no-store'})
+    if 'drive' in requested and google_auth.status().get('sources',{}).get('drive'):
+        background_tasks.add_task(google_auth.setup_drive)
     return HTMLResponse(google_auth.completion_page(profile),headers={'Cache-Control':'no-store'})
 
 @app.post('/api/google/sync')

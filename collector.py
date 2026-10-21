@@ -12,7 +12,7 @@ STATE = Path(os.environ.get('WORKMATE_HOME', str(ROOT)))
 DATA = STATE / 'data'
 IST = ZoneInfo('Asia/Kolkata')
 SKIP = {'.git', 'node_modules', 'Library', '.venv', 'venv', '__pycache__', 'build', 'dist', 'target', '.Trash', '.claude', '.codex', 'Pods', '.cache', 'browser-profile'}
-MEDIA = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.mov', '.mp4', '.m4v', '.mp3', '.wav', '.pdf', '.docx', '.xlsx', '.pptx', '.stl', '.glb', '.obj', '.blend'}
+MEDIA = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.mov', '.mp4', '.m4v', '.mp3', '.wav', '.pdf', '.docx', '.xlsx', '.pptx', '.step', '.stp', '.iges', '.igs', '.brep', '.stl', '.glb', '.obj', '.blend'}
 
 def now():
     return dt.datetime.now(IST).isoformat()
@@ -81,7 +81,7 @@ def local_inventory():
                 if f.suffix.lower() not in MEDIA or f.is_symlink():continue
                 try:
                     stat=f.stat()
-                    files.append({'name':name,'path':str(f),'extension':f.suffix.lower(),'size':stat.st_size,'modified':dt.datetime.fromtimestamp(stat.st_mtime,IST).isoformat(),'category': 'Video' if f.suffix.lower() in {'.mov','.mp4','.m4v'} else 'Image' if f.suffix.lower() in {'.png','.jpg','.jpeg','.webp','.gif'} else 'Audio' if f.suffix.lower() in {'.mp3','.wav'} else '3D' if f.suffix.lower() in {'.stl','.glb','.obj','.blend'} else 'Document'})
+                    files.append({'name':name,'path':str(f),'extension':f.suffix.lower(),'size':stat.st_size,'modified':dt.datetime.fromtimestamp(stat.st_mtime,IST).isoformat(),'category': 'Video' if f.suffix.lower() in {'.mov','.mp4','.m4v'} else 'Image' if f.suffix.lower() in {'.png','.jpg','.jpeg','.webp','.gif'} else 'Audio' if f.suffix.lower() in {'.mp3','.wav'} else '3D' if f.suffix.lower() in {'.step', '.stp', '.iges', '.igs', '.brep', '.stl','.glb','.obj','.blend'} else 'Document'})
                 except OSError as e:errors.append(str(e))
             if visited>100000:break
         if visited>100000:break

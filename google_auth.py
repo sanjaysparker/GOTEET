@@ -13,6 +13,17 @@ from collector import DATA, now
 
 SERVICE='in.droneos.workmate'
 PENDING={}
+DRIVE_SETUP={'state':'idle','message':''}
+
+def setup_drive():
+    DRIVE_SETUP.update(state='importing',message='Setting up Drive automatically…')
+    try:
+        result=sync(['drive'])
+        errors=result.get('errors',[])
+        DRIVE_SETUP.update(state='error' if errors else 'ready',message='Drive import needs attention. Use Import selected data to retry.' if errors else 'Drive is ready. Browse folders and preview files inside GOTEET.')
+    except Exception:
+        DRIVE_SETUP.update(state='error',message='Drive setup could not finish. Check the connection and retry the Drive import.')
+
 SYNC_LOCK=threading.Lock()
 SCOPES={
  'gmail':'https://www.googleapis.com/auth/gmail.readonly',
@@ -42,7 +53,7 @@ def status():
         config=read_secret('google-client') or {}
         granted=set((token or {}).get('scope','').split())
         return {'configured':bool(config),'connected':bool(token),'profile':token.get('profile') if token else None,
-          'project_id':config.get('project_id',''),'sources':{name:scope in granted for name,scope in SCOPES.items()}}
+          'drive_setup':dict(DRIVE_SETUP),'project_id':config.get('project_id',''),'sources':{name:scope in granted for name,scope in SCOPES.items()}}
     except Exception:
         return {'configured':False,'connected':False,'error':'OS credential store unavailable. Configure a supported keyring before signing in.'}
 
@@ -55,7 +66,7 @@ def start(redirect, workspace=False, sources=None):
     selected=sources if sources is not None else (['gmail','drive','calendar'] if workspace else [])
     if not isinstance(selected,list) or any(name not in SCOPES for name in selected):raise ValueError('Choose supported Google sources')
     scope=' '.join(['openid','email','profile']+[SCOPES[name] for name in dict.fromkeys(selected)])
-    PENDING[state]={'verifier':verifier,'redirect':redirect,'created':time.monotonic(),'scope':scope}
+    PENDING[state]={'verifier':verifier,'redirect':redirect,'created':time.monotonic(),'scope':scope,'sources':selected}
     return {'url':'https://accounts.google.com/o/oauth2/v2/auth?'+urlencode({'client_id':config['client_id'],'redirect_uri':redirect,
       'response_type':'code','scope':scope,'state':state,'code_challenge':challenge,'code_challenge_method':'S256','access_type':'offline','prompt':'consent select_account' if selected else 'select_account','include_granted_scopes':'true' if selected else 'false'})}
 
