@@ -71,3 +71,12 @@ Native Media verification: Flow+Noise+Modelling.pdf first page rendered inside i
 - Primary Google sign-in requests identity plus Drive readonly, disclosed in Connections. Existing sessions retain a direct Enable Drive previews button. No Google consent was granted by automation.
 - README includes actual previously verified native STEP solid/wireframe screenshots and an authored banner/architecture diagram.
 - Native 0.5.3 recheck blocked by locked Mac. Integrated browser content visual verification remains unresolved; loaded page title alone is not proof of rendering.
+
+## 0.5.4 — work-item detail and chart fixes
+
+- Task titles were static text; only Edit was wired. Native inspection confirmed Edit worked. Titles now open the shared detailed editor.
+- Cloned Taskosaur reference at a5bea52; independently adapted its detail-surface concepts, no upstream code copied.
+- Added persisted description, start date and checklist in a compatible task_details table. Legacy task updates preserve detail data. Invalid reversed dates are rejected without changing saved records.
+- Task and timeline detail: native title click opened task details; timeline project bar opened project details with five linked tasks. Existing eight tasks retained. No real task values changed during UI checks.
+- Fixed donut tooltip obscuring total; native light-theme screenshot showed clear 8-task total and readable chart axes. Error banner absent. Both live snapshot and connection checks returned HTTP 200; original transient fetch failure cause not reproduced.
+- Native API reports 0.5.4. `npm run build`, Node syntax check and 37 pytest tests pass. Staging app removed; /Applications/GOTEET.app retained.

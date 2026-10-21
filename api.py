@@ -49,7 +49,7 @@ import diagnostics
 import agent_management
 from collector import DATA, STATE, now
 
-app=FastAPI(title='GOTEET local API',version='0.5.3')
+app=FastAPI(title='GOTEET local API',version='0.5.4')
 TOKEN=os.environ.get('WORKMATE_API_TOKEN') or secrets.token_urlsafe(48)
 INSTANCE=str(uuid.uuid4())
 BASE_URL=''
@@ -95,7 +95,7 @@ def audit(action,actor='desktop'):
     with engine.connect() as c:c.execute('INSERT INTO audit VALUES(?,?,?,?)',(str(uuid.uuid4()),action,actor,now()))
 
 @app.get('/api/health')
-def health():return {'ok':True,'version':'0.5.3','instance':INSTANCE,'pid':os.getpid()}
+def health():return {'ok':True,'version':'0.5.4','instance':INSTANCE,'pid':os.getpid()}
 
 @app.get('/api/snapshot')
 def snapshot(request:Request):

@@ -21,3 +21,7 @@ Appearance: Graphite, Midnight and Paper themes, four accent presets/custom colo
 ## CAD import in 0.5.3
 
 STEP/IGES/BREP conversion uses [occt-import-js 0.0.23](https://github.com/kovacsv/occt-import-js), under LGPL-2.1, with its OpenCascade dependencies. `scripts/prepare_cad.cjs` copies the runtime and license notices from the installed npm package into the app on build. Worker conversion is bounded to 25 MB and 30 seconds. The README screenshots use the upstream simple-basic-cube fixture. Three.js renders the result without rewriting source geometry. Storytold remains a concept reference, not the document rendering engine.
+
+## Taskosaur task-detail reference
+
+Inspected a shallow clone of https://github.com/Taskosaur/Taskosaur, including `frontend/src/components/tasks/TaskDetailClient.tsx` and `TaskDetailModal.tsx`. Adapted the concepts of a focused work-item detail surface, description, schedule, checklist and attachments to GOTEET. No Taskosaur source code is bundled: its Business Source License is distinct from GOTEET's dependencies. This update does not implement Taskosaur's dependency graph, sprint engine or time tracking.

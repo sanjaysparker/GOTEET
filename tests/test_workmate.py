@@ -367,3 +367,16 @@ def test_google_callback_auto_drive_only_after_grant(workspace,monkeypatch):
         assert client.get('/api/google/callback?code=fake&state=test-auto').status_code==200
         assert calls==['drive']
     google_auth.PENDING.pop('test-auto',None)
+
+def test_task_details_persist_and_legacy_updates_preserve_them(workspace):
+    task=engine.save_task({'title':'Detail regression','description':'Expected outcome','start_date':'2026-10-21','due':'2026-10-23','checklist':[{'text':'Review result','done':True}]})
+    legacy={k:v for k,v in task.items() if k not in ['description','start_date','checklist']}
+    legacy['status']='Done'
+    updated=engine.save_task(legacy)
+    assert updated['description']=='Expected outcome'
+    assert updated['start_date']=='2026-10-21'
+    assert updated['checklist']==[{'text':'Review result','done':True}]
+    assert next(t for t in engine.snapshot()['tasks'] if t['id']==task['id'])['checklist']==updated['checklist']
+    with pytest.raises(ValueError,match='Due date'):
+        engine.save_task({**updated,'start_date':'2026-10-24'})
+    assert next(t for t in engine.snapshot()['tasks'] if t['id']==task['id'])['start_date']=='2026-10-21'

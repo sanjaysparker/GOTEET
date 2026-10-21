@@ -55,7 +55,7 @@ async function startBackend(){
 function trusted(event){return event.sender===windowRef?.webContents;}
 async function apiRequest(method,route,value){
  if(!/^\/api\/[a-zA-Z0-9_/-]+(?:\?[^#\s]*)?$/.test(route)||!['GET','POST'].includes(method))throw new Error('Unsupported API request');
- const response=await fetch(runtime.url+route,{method,headers:{'Authorization':'Bearer '+runtime.token,'Content-Type':'application/json'},body:method==='POST'?JSON.stringify(value||{}):undefined});
+ let response;try{response=await fetch(runtime.url+route,{method,headers:{'Authorization':'Bearer '+runtime.token,'Content-Type':'application/json'},body:method==='POST'?JSON.stringify(value||{}):undefined});}catch{throw new Error('Connection to the local service was interrupted. Your saved data is retained; retry when GOTEET reconnects.');}
  let result;try{result=await response.json();}catch{throw new Error('The local service returned an unexpected response (HTTP '+response.status+'). Please retry or restart GOTEET.');}if(!response.ok)throw new Error(result.detail||'The request failed');return result;
 }
 ipcMain.handle('api',async(event,method,route,value)=>{if(!trusted(event))throw new Error('Untrusted caller');return apiRequest(method,route,value);});

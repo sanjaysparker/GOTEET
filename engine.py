@@ -36,6 +36,7 @@ def connect():
       CREATE TABLE IF NOT EXISTS members(id TEXT PRIMARY KEY,name TEXT NOT NULL,token_hash TEXT NOT NULL,created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,channel TEXT NOT NULL,author_id TEXT NOT NULL,author_name TEXT NOT NULL,body TEXT NOT NULL,created_at TEXT NOT NULL);''')
     c.execute('''CREATE TABLE IF NOT EXISTS attachments(id TEXT PRIMARY KEY,target_type TEXT NOT NULL,target_id TEXT NOT NULL,name TEXT NOT NULL,size INTEGER NOT NULL,mime_type TEXT NOT NULL,sha256 TEXT NOT NULL,author_name TEXT NOT NULL,created_at TEXT NOT NULL)''')
+    c.execute("CREATE TABLE IF NOT EXISTS task_details(id TEXT PRIMARY KEY,description TEXT NOT NULL DEFAULT '',start_date TEXT NOT NULL DEFAULT '',checklist TEXT NOT NULL DEFAULT '[]')")
     return c
 
 def read_json(name):
@@ -45,6 +46,10 @@ def read_json(name):
 def snapshot():
     with connect() as c:
         tasks=[dict(x) for x in c.execute('SELECT * FROM tasks ORDER BY created_at DESC')]
+        detail_rows={r['id']:dict(r) for r in c.execute('SELECT * FROM task_details')}
+        for task in tasks:
+            detail=detail_rows.get(task['id'],{})
+            task.update(description=detail.get('description',''),start_date=detail.get('start_date',''),checklist=json.loads(detail.get('checklist','[]')))
         reports=[dict(x) for x in c.execute('SELECT * FROM reports ORDER BY created_at DESC LIMIT 30')]
         conversations=[dict(x) for x in c.execute('SELECT * FROM conversations ORDER BY created_at DESC LIMIT 20')]
         concepts=[dict(x) for x in c.execute('SELECT * FROM concepts ORDER BY updated_at DESC')]
@@ -76,11 +81,26 @@ def save_task(payload):
       'owner':str(payload.get('owner','Unassigned'))[:200],'status':status,'priority':priority,'due':due,
       'source_url':str(payload.get('source_url',''))[:2000],'created_at':now(),'updated_at':now()}
     with connect() as c:
+        previous=c.execute('SELECT * FROM task_details WHERE id=?',(values['id'],)).fetchone()
+        detail=dict(previous) if previous else {'description':'','start_date':'','checklist':'[]'}
+        description=str(payload.get('description',detail['description']))
+        if len(description)>30000:raise ValueError('Description exceeds 30000 characters')
+        start_date=payload.get('start_date',detail['start_date'])
+        if start_date:dt.date.fromisoformat(start_date)
+        if start_date and due and start_date>due:raise ValueError('Due date must be on or after start date')
+        checklist=payload.get('checklist',json.loads(detail['checklist']))
+        if not isinstance(checklist,list) or len(checklist)>100:raise ValueError('Checklist must contain at most 100 items')
+        for item in checklist:
+            if not isinstance(item,dict) or not isinstance(item.get('text'),str) or not item['text'].strip() or len(item['text'])>500 or type(item.get('done')) is not bool:raise ValueError('Invalid checklist item')
+        checklist=[{'text':item['text'].strip(),'done':item['done']} for item in checklist]
         c.execute('''INSERT INTO tasks VALUES(:id,:title,:project,:owner,:status,:priority,:due,:source_url,:created_at,:updated_at)
           ON CONFLICT(id) DO UPDATE SET title=excluded.title,project=excluded.project,
           owner=excluded.owner,status=excluded.status,priority=excluded.priority,due=excluded.due,
           source_url=excluded.source_url,updated_at=excluded.updated_at''',values)
-        return dict(c.execute('SELECT * FROM tasks WHERE id=?',(values['id'],)).fetchone())
+        c.execute('INSERT INTO task_details VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET description=excluded.description,start_date=excluded.start_date,checklist=excluded.checklist',(values['id'],description,start_date,json.dumps(checklist)))
+        result=dict(c.execute('SELECT * FROM tasks WHERE id=?',(values['id'],)).fetchone())
+        result.update(description=description,start_date=start_date,checklist=checklist)
+        return result
 
 def report(kind='daily', clock=None):
     if kind not in {'daily','weekly'}:raise ValueError('Report kind must be daily or weekly')
