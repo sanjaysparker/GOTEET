@@ -49,7 +49,7 @@ import diagnostics
 import agent_management
 from collector import DATA, STATE, now
 
-app=FastAPI(title='GOTEET local API',version='0.4.0')
+app=FastAPI(title='GOTEET local API',version='0.4.1')
 TOKEN=os.environ.get('WORKMATE_API_TOKEN') or secrets.token_urlsafe(48)
 INSTANCE=str(uuid.uuid4())
 BASE_URL=''
@@ -95,7 +95,7 @@ def audit(action,actor='desktop'):
     with engine.connect() as c:c.execute('INSERT INTO audit VALUES(?,?,?,?)',(str(uuid.uuid4()),action,actor,now()))
 
 @app.get('/api/health')
-def health():return {'ok':True,'version':'0.4.0','instance':INSTANCE,'pid':os.getpid()}
+def health():return {'ok':True,'version':'0.4.1','instance':INSTANCE,'pid':os.getpid()}
 
 @app.get('/api/snapshot')
 def snapshot(request:Request):
@@ -446,10 +446,10 @@ def google_start(value:dict):
 
 @app.get('/api/google/callback',response_class=HTMLResponse)
 def google_callback(code:str='',state:str='',error:str=''):
-    if error:return '<h2>Google sign-in cancelled.</h2><p>Return to GOTEET to try again.</p>'
-    try:google_auth.finish(code,state)
-    except Exception:return HTMLResponse('<h2>Sign-in could not finish.</h2><p>Return to GOTEET and start sign-in again.</p>',status_code=400)
-    return '<h2>Signed in to GOTEET.</h2><p>You can close this browser tab and return to the app.</p>'
+    if error:return HTMLResponse(google_auth.completion_page(cancelled=True),headers={'Cache-Control':'no-store'})
+    try:profile=google_auth.finish(code,state)
+    except Exception:return HTMLResponse(google_auth.completion_page(failed=True),status_code=400,headers={'Cache-Control':'no-store'})
+    return HTMLResponse(google_auth.completion_page(profile),headers={'Cache-Control':'no-store'})
 
 @app.post('/api/google/sync')
 def google_sync(value:dict={}):

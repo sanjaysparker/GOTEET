@@ -1,6 +1,6 @@
 # GOTEET verification — 21 October 2026
 
-Installed unsigned Apple Silicon version **0.4.0**: `/Applications/GOTEET.app`. Source: `/Users/sanju/GOTEET`.
+Installed unsigned Apple Silicon version **0.4.1**: `/Applications/GOTEET.app`. Source: `/Users/sanju/GOTEET`.
 
 ## Google integration update — 0.4.0
 
@@ -36,3 +36,9 @@ Team persistence/member privacy passed fixture tests; no second-device or shared
 About includes update checking, but no published release repository or signed automatic updater is configured. No remote release was published. Daily 9 AM IST and Friday 6 PM IST reporting automations are attached to the originating Codex chat and depend on that local scheduler being available.
 
 Private inventory, SQLite state, OAuth/model credentials and downloaded speech models are excluded from the distributable and Git history. Evidence screenshots are local and excluded from Git.
+
+## Login update — 0.4.1
+
+28 tests passed, including identity-only scopes/account selection, pending-state invalidation on logout and HTML escaping on the new callback page. The user completed company Google Workspace authorization; the installed backend confirmed connected status and all five read-only scopes. The callback design was rendered locally for visual inspection; this does not replay OAuth consent. Full workspace isolation per Google identity is not implemented.
+
+Installed 0.4.1 import readback: 85 mail headers (bounded/truncated), 126 Drive metadata records, 0 Calendar events, 0 Contacts and 0 Tasks; no source errors. The callback app-link test was blocked by browser automation security; no workaround was attempted. Manual link click remains unverified.

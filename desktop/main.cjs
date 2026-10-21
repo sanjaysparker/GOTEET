@@ -16,7 +16,9 @@ if(cdpPort){
  app.commandLine.appendSwitch('remote-debugging-port',cdpPort);
 }
 if(!app.requestSingleInstanceLock())app.quit();
-app.on('second-instance',()=>{windowRef?.show();windowRef?.focus();});
+function openAccount(url){if(url!=='goteet://account'&&url!=='goteet://account/')return;windowRef?.show();windowRef?.focus();if(runtime)apiRequest('POST','/api/ui/command',{action:'navigate',value:'Connections'}).catch(()=>{});}
+app.on('second-instance',(_event,argv)=>{windowRef?.show();windowRef?.focus();for(const url of argv)openAccount(url);});
+app.on('open-url',(event,url)=>{event.preventDefault();openAccount(url);});
 function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function startBackend(){
  if(process.env.WORKMATE_SERVER_URL&&process.env.WORKMATE_SERVER_TOKEN){
@@ -169,6 +171,7 @@ ipcMain.handle('download-attachment',async(event,item)=>{
 });
 app.whenReady().then(async()=>{
  app.setAccessibilitySupportEnabled(true);
+ app.setAsDefaultProtocolClient('goteet');
  app.setAboutPanelOptions({applicationName:'GOTEET',applicationVersion:app.getVersion(),copyright:'Made by SPARKER',iconPath:path.join(__dirname,'assets/icon.png')});
  if(app.dock)app.dock.setIcon(path.join(__dirname,'assets/icon.png'));
  try{

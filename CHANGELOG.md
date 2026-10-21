@@ -1,5 +1,11 @@
 # Changes
 
+## 0.4.1 — 21 October 2026
+
+- Made basic Google identity sign-in the primary flow, with account chooser and Log out. Data imports now start unselected under an optional panel; developer configuration is collapsed.
+- Added branded callback success/cancel/error pages and an Open GOTEET desktop link.
+- Refresh account status automatically; logout invalidates pending sign-in attempts.
+
 ## 0.4.0 — 21 October 2026
 
 - Added selectable read-only Gmail, Drive, Calendar, Contacts and Google Tasks imports, with per-source results and capture times.

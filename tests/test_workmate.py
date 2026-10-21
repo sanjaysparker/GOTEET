@@ -319,3 +319,25 @@ def test_google_missing_scope_and_account_switch_do_not_mix_data(workspace,monke
     value=json.loads((workspace/'workspace.json').read_text())
     assert 'gmail' not in value and 'followups' not in value
     assert value['plane']['status']=='offline' and value['account']=='new@example.test'
+
+
+def test_google_basic_login_does_not_request_data_and_logout_cancels_pending(monkeypatch):
+    import google_auth
+    from urllib.parse import urlparse, parse_qs
+    monkeypatch.setattr(google_auth,'read_secret',lambda name: {'client_id':'test.apps.googleusercontent.com','client_secret':''} if name=='google-client' else None)
+    query=parse_qs(urlparse(google_auth.start('http://127.0.0.1/callback',sources=[])['url']).query)
+    assert query['scope']==['openid email profile']
+    assert query['prompt']==['select_account']
+    assert query['include_granted_scopes']==['false']
+    assert google_auth.PENDING
+    google_auth.disconnect()
+    assert not google_auth.PENDING
+
+
+def test_google_completion_page_escapes_identity():
+    import google_auth
+    page=google_auth.completion_page({'name':'<script>alert(1)</script>','email':'a&b@example.test'})
+    assert '<script>alert' not in page
+    assert 'a&amp;b@example.test' in page
+    assert 'goteet://account' in page
+    assert 'Sign-in cancelled.' in google_auth.completion_page(cancelled=True)

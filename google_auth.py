@@ -57,7 +57,7 @@ def start(redirect, workspace=False, sources=None):
     scope=' '.join(['openid','email','profile']+[SCOPES[name] for name in dict.fromkeys(selected)])
     PENDING[state]={'verifier':verifier,'redirect':redirect,'created':time.monotonic(),'scope':scope}
     return {'url':'https://accounts.google.com/o/oauth2/v2/auth?'+urlencode({'client_id':config['client_id'],'redirect_uri':redirect,
-      'response_type':'code','scope':scope,'state':state,'code_challenge':challenge,'code_challenge_method':'S256','access_type':'offline','prompt':'consent','include_granted_scopes':'true'})}
+      'response_type':'code','scope':scope,'state':state,'code_challenge':challenge,'code_challenge_method':'S256','access_type':'offline','prompt':'consent select_account' if selected else 'select_account','include_granted_scopes':'true' if selected else 'false'})}
 
 def finish(code,state):
     pending=PENDING.pop(state,None)
@@ -91,6 +91,7 @@ def access_token():
     return token['access_token']
 
 def disconnect():
+    PENDING.clear()
     token=read_secret('google-tokens')
     if token:
         try:httpx.post('https://oauth2.googleapis.com/revoke',data={'token':token.get('refresh_token') or token['access_token']},timeout=15)
@@ -198,3 +199,16 @@ def _sync(sources=None):
     workspace['integration_note']='Direct Google OAuth import; each source retains its own capture time. Failed imports retain previous same-account data.'
     DATA.mkdir(parents=True,exist_ok=True);temp=DATA/'workspace.tmp';temp.write_text(json.dumps(workspace,indent=2));temp.chmod(0o600);temp.replace(DATA/'workspace.json')
     return {'errors':errors,'results':results,'captured_at':now()}
+
+
+def completion_page(profile=None, failed=False, cancelled=False):
+    """Self-contained callback view; no third-party assets or credential output."""
+    from html import escape
+    title='You’re signed in.' if profile else ('Sign-in cancelled.' if cancelled else 'Let’s try that again.')
+    message='Your Google account is connected to GOTEET. Return to your workspace to choose what happens next.' if profile else 'Your workspace is still available. Return to GOTEET and choose Sign in with Google to start again.'
+    account=escape((profile or {}).get('email',''))
+    name=escape((profile or {}).get('name','Your Google account'))
+    identity=f'<div class="account"><span class="avatar">{escape(name[:1])}</span><div><strong>{name}</strong><span>{account}</span></div><b>Connected</b></div>' if profile else ''
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>GOTEET · Google sign-in</title><style>
+    *{{box-sizing:border-box}}body{{margin:0;background:#101315;color:#f2f3f5;font:16px -apple-system,BlinkMacSystemFont,Arial,sans-serif;min-height:100vh;display:grid;place-items:center;padding:32px}}main{{width:min(760px,100%)}}header{{display:flex;align-items:center;gap:12px;font-weight:750;letter-spacing:.14em;margin-bottom:50px}}.mark{{background:#ffad70;color:#17191b;border-radius:14px;padding:10px 16px;font-size:27px;letter-spacing:-.1em}}.card{{background:#1b1f23;border:1px solid #343b43;border-radius:24px;padding:40px;box-shadow:0 24px 80px #0004}}.eyebrow{{font-size:12px;letter-spacing:.15em;color:#9cdbb6;text-transform:uppercase}}h1{{font-size:clamp(32px,6vw,48px);letter-spacing:-.04em;margin:14px 0}}p{{color:#afb8c4;line-height:1.65;max-width:570px}}.account{{display:flex;align-items:center;gap:14px;padding:20px 0;margin:26px 0;border-block:1px solid #343b43}}.avatar{{background:#343b43;border-radius:50%;width:44px;height:44px;display:grid;place-items:center}}.account div{{flex:1;min-width:0}}.account div span{{display:block;color:#aab4c0;font-size:13px;margin-top:5px;overflow-wrap:anywhere}}b{{color:#9cdbb6;font-size:12px}}a{{display:inline-flex;text-decoration:none;background:#ffad70;color:#191a1c;padding:14px 22px;border-radius:12px;font-weight:700}}a:hover{{background:#ffc294}}a:focus-visible{{outline:3px solid white;outline-offset:4px}}.steps{{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:30px}}.steps strong{{font-size:14px}}.steps p,footer{{font-size:12px}}footer{{margin-top:24px;color:#8f9ba9;line-height:1.6}}@media(max-width:560px){{.card{{padding:24px}}.steps{{grid-template-columns:1fr}}.account b{{display:none}}}}@media(prefers-reduced-motion:no-preference){{.card{{animation:enter .35s ease-out}}@keyframes enter{{from{{opacity:0;transform:translateY(8px)}}to{{opacity:1;transform:translateY(0)}}}}}}
+    </style></head><body><main><header><span class="mark">g</span>GOTEET</header><section class="card"><span class="eyebrow">Google account · {'Connected' if profile else 'Action needed'}</span><h1>{title}</h1><p>{message}</p>{identity}<a href="goteet://account">Open GOTEET ↗</a><div class="steps"><div><strong>01 · Your account</strong><p>Switch accounts or log out in Connections.</p></div><div><strong>02 · Your profile</strong><p>Choose whether to use your Google name and photo.</p></div><div><strong>03 · Your imports</strong><p>Select optional sources and review their permissions.</p></div></div></section><footer>If the button does not open the app, select GOTEET in your Dock. You can close this tab. Signing out of GOTEET does not sign you out of Google in your browser.</footer></main></body></html>'''
