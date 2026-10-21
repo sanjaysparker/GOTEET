@@ -267,3 +267,55 @@ def test_attachment_roundtrip_preserves_original_bytes(workspace):
         downloaded=client.get('/api/attachments/download?id='+item['id'],headers=headers())
         assert downloaded.content==b'timeline evidence'
         assert client.get('/api/attachments/download?id=../../secret',headers=headers()).status_code==404
+
+def test_google_selected_scopes_are_readonly(monkeypatch):
+    from urllib.parse import urlparse,parse_qs
+    monkeypatch.setattr(google_auth,'read_secret',lambda _: {'client_id':'unit.apps.googleusercontent.com','client_secret':''})
+    result=google_auth.start('http://127.0.0.1:12345/api/google/callback',sources=['contacts','google_tasks'])
+    query=parse_qs(urlparse(result['url']).query)
+    assert google_auth.SCOPES['contacts'] in query['scope'][0]
+    assert google_auth.SCOPES['google_tasks'] in query['scope'][0]
+    assert google_auth.SCOPES['gmail'] not in query['scope'][0]
+    assert query['include_granted_scopes']==['true']
+    with pytest.raises(ValueError):google_auth.start('http://127.0.0.1:12345/api/google/callback',sources=['gmail.modify'])
+
+def test_google_import_partial_failure_retains_snapshot_and_filters_mail(workspace,monkeypatch):
+    import httpx
+    monkeypatch.setattr(google_auth,'DATA',workspace)
+    token={'access_token':'fake','scope':' '.join(google_auth.SCOPES.values()),'profile':{'email':'owner@example.test'}}
+    monkeypatch.setattr(google_auth,'access_token',lambda:'fake')
+    monkeypatch.setattr(google_auth,'read_secret',lambda _:token)
+    (workspace/'workspace.json').write_text(json.dumps({'account':'owner@example.test','drive':{'files':[{'title':'Retained file'}],'captured_at':'previous'}}))
+    original=httpx.Client
+    def handler(request):
+        path=request.url.path
+        if path.endswith('/messages'):return httpx.Response(200,json={'messages':[{'id':'auth'},{'id':'work'}]})
+        if '/messages/' in path:
+            return httpx.Response(200,json={'id':path.rsplit('/',1)[-1],'internalDate':'1792534972000','snippet':'never persist body or snippet','payload':{'headers':[{'name':'Subject','value':'Your verification code' if path.endswith('/auth') else 'Project review'}]}})
+        if '/drive/' in path:return httpx.Response(403,json={})
+        if path.endswith('/connections'):return httpx.Response(200,json={'connections':[{'resourceName':'people/1','names':[{'displayName':'Test Person'}],'emailAddresses':[{'value':'person@example.test'}]}]})
+        if path.endswith('/users/@me/lists'):return httpx.Response(200,json={'items':[{'id':'list1','title':'Work'}]})
+        if path.endswith('/lists/list1/tasks'):return httpx.Response(200,json={'items':[{'id':'task1','title':'Review project','status':'needsAction'}]})
+        return httpx.Response(200,json={'items':[]})
+    monkeypatch.setattr(google_auth.httpx,'Client',lambda **kwargs:original(transport=httpx.MockTransport(handler),**kwargs))
+    result=google_auth.sync(['gmail','drive','contacts','google_tasks'])
+    assert result['results']['gmail']['count']==1
+    assert result['results']['contacts']['count']==1 and result['results']['google_tasks']['count']==1
+    assert result['errors'][0]['source']=='drive'
+    data=json.loads((workspace/'workspace.json').read_text())
+    assert data['drive']['captured_at']=='previous'
+    assert 'snippet' not in data['gmail']['emails'][0]
+    assert data['google_tasks']['tasks'][0]['list_title']=='Work'
+    assert engine.snapshot()['tasks']==[]
+    assert not (workspace/'workspace.json').stat().st_mode & 0o077
+
+def test_google_missing_scope_and_account_switch_do_not_mix_data(workspace,monkeypatch):
+    monkeypatch.setattr(google_auth,'DATA',workspace)
+    monkeypatch.setattr(google_auth,'access_token',lambda:'fake')
+    monkeypatch.setattr(google_auth,'read_secret',lambda _:{'scope':'openid email profile','profile':{'email':'new@example.test'}})
+    (workspace/'workspace.json').write_text(json.dumps({'account':'old@example.test','gmail':{'emails':[{'subject':'Old account'}]},'followups':[{'title':'Old'}],'plane':{'status':'offline'}}))
+    result=google_auth.sync(['gmail'])
+    assert 'permission not granted' in result['errors'][0]['error']
+    value=json.loads((workspace/'workspace.json').read_text())
+    assert 'gmail' not in value and 'followups' not in value
+    assert value['plane']['status']=='offline' and value['account']=='new@example.test'

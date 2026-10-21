@@ -1,8 +1,16 @@
 # GOTEET verification — 21 October 2026
 
-Installed unsigned Apple Silicon version **0.3.1**: `/Applications/GOTEET.app`. Source: `/Users/sanju/GOTEET`.
+Installed unsigned Apple Silicon version **0.4.0**: `/Applications/GOTEET.app`. Source: `/Users/sanju/GOTEET`.
 
-## Measured checks
+## Google integration update — 0.4.0
+
+- 26 pytest tests passed; TypeScript/Vite, frozen backend and Mac packaging completed. Installed API reports 0.4.0.
+- Added tests for source selection, read-only scopes, partial failure retention, sensitive-mail exclusion, missing permissions, account isolation and no local task creation.
+- Google project `goteet`: consent configuration created with explicit policy approval; Desktop OAuth client imported into the OS credential store. Gmail, Drive, Calendar, People and Tasks APIs verified in the enabled-services list.
+- Personal/work accounts added as test users. Clicking the installed Connections **Connect selected Google data** button opened Google’s account chooser for GOTEET. Evidence: `evidence/google-login-ready.png`.
+- Final Google consent and live import verification are pending the user completing sign-in. No direct Google import success is claimed.
+
+## Earlier checks — 0.3.1
 
 - `.venv312/bin/python -m pytest -q`: **23 passed**. Covers task/project validation, report windows and commit deduplication, owner/member authorization and privacy, chat identities, OAuth state/PKCE, reviewed-plan idempotency, queued versus completed desktop/download actions, permissions, voice decoder compatibility, attachment integrity, media range/allowlist/symlink checks, file browsing/protection, keyring-only model credentials, download-name validation and normalized owner-only profile photos/preferences.
 - TypeScript/Vite production build, frozen Python backend and Electron macOS arm64 packaging completed. Installed health reports version 0.3.1. Windows/Linux targets are defined but untested.
@@ -19,7 +27,7 @@ Installed unsigned Apple Silicon version **0.3.1**: `/Applications/GOTEET.app`. 
 
 GitHub uses two existing authenticated CLI accounts; the captured inventory contains 37 repositories. Local indexing captured 79 checkouts/worktrees/submodules and 4,383 media/document metadata records with bounded traversal; Photos Library access was denied. Files browses folders on demand with the current user's OS access. Neither constitutes unrestricted access or a complete disk content audit.
 
-Google data currently includes imported Codex connector snapshots. Direct GOTEET Google sign-in requires a registered Desktop OAuth client and user authorization. No client was created during this task. The UI disables sign-in until configured and explains the separate authorization. Cloud API accounts are unconfigured; provider/keychain error behavior is fixture-tested. Codex is signed in; Claude is installed but signed out. Local Ollama inference ran with qwen3:0.6b, which misread a task status in one check; review its suggestions.
+Google data currently includes imported Codex connector snapshots. The direct GOTEET Desktop OAuth client is now configured; user account authorization and live import verification remain pending. The UI disables sign-in until configured and explains the separate authorization. Cloud API accounts are unconfigured; provider/keychain error behavior is fixture-tested. Codex is signed in; Claude is installed but signed out. Local Ollama inference ran with qwen3:0.6b, which misread a task status in one check; review its suggestions.
 
 System metrics are point-in-time measurements. Storage candidates use bounded traversal with truncation/access errors reported. No cleanup runs automatically, and a single RAM/swap sample is not a diagnosis of a slowdown. Skill inventory reports app context toggles; MCP inventory reports registration, not server health or host approval.
 

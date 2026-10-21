@@ -1,5 +1,12 @@
 # Changes
 
+## 0.4.0 — 21 October 2026
+
+- Added selectable read-only Gmail, Drive, Calendar, Contacts and Google Tasks imports, with per-source results and capture times.
+- Added imported-record previews and optional Google profile name/photo import.
+- Preserved previous source snapshots when individual imports fail; separated accounts when changing Google identity.
+- Verified installed Google login opens the system-browser account chooser. Google consent remains user-controlled.
+
 ## 0.3.1 — 21 October 2026
 
 - Added local profile photo upload and optional personal/work details.

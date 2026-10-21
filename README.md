@@ -16,7 +16,7 @@ An integrated desktop work assistant following the requested spark-aigis-maker a
 - Measured resource gauges, top memory users and bounded storage review with AI explanations.
 - About-only SPARKER credit and public GitHub release checking.
 - Daily/weekly report history and export.
-- Google Desktop OAuth with PKCE/state and OS credential storage. Import your own Desktop OAuth client JSON in Connections. Basic Google sign-in and optional read-only Gmail, Drive and Calendar access are separate choices. Enable those APIs and configure your consent audience/test users in the Google project. Do not paste credentials in chat.
+- Google Desktop OAuth with PKCE/state and OS credential storage. Import your own Desktop OAuth client JSON in Connections. Basic Google sign-in and optional read-only Gmail, Drive, Calendar, Contacts and Google Tasks access are separate choices. Enable those APIs and configure your consent audience/test users in the Google project. Use **Connect selected Google data** to open the system browser account chooser and consent screen. After consenting, return to Connections, check sign-in status and import selected data. Optional **Use Google name & photo** updates the local profile. Imports are bounded, show per-source capture times, and preserve older data on partial failure. Do not paste credentials in chat.
 - Read-only Codex assistant using existing ChatGPT CLI login, plus local Ollama models.
 - Microphone recording, local faster-whisper transcription and local system voice playback.
 

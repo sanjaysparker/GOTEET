@@ -49,7 +49,7 @@ import diagnostics
 import agent_management
 from collector import DATA, STATE, now
 
-app=FastAPI(title='GOTEET local API',version='0.3.1')
+app=FastAPI(title='GOTEET local API',version='0.4.0')
 TOKEN=os.environ.get('WORKMATE_API_TOKEN') or secrets.token_urlsafe(48)
 INSTANCE=str(uuid.uuid4())
 BASE_URL=''
@@ -95,7 +95,7 @@ def audit(action,actor='desktop'):
     with engine.connect() as c:c.execute('INSERT INTO audit VALUES(?,?,?,?)',(str(uuid.uuid4()),action,actor,now()))
 
 @app.get('/api/health')
-def health():return {'ok':True,'version':'0.3.1','instance':INSTANCE,'pid':os.getpid()}
+def health():return {'ok':True,'version':'0.4.0','instance':INSTANCE,'pid':os.getpid()}
 
 @app.get('/api/snapshot')
 def snapshot(request:Request):
@@ -442,7 +442,7 @@ def google_config(value:dict):return google_auth.configure(value)
 @app.post('/api/google/start')
 def google_start(value:dict):
     settings.require('google_enabled')
-    return google_auth.start(BASE_URL+'/api/google/callback',value.get('workspace',False))
+    return google_auth.start(BASE_URL+'/api/google/callback',value.get('workspace',False),value.get('sources'))
 
 @app.get('/api/google/callback',response_class=HTMLResponse)
 def google_callback(code:str='',state:str='',error:str=''):
@@ -452,8 +452,12 @@ def google_callback(code:str='',state:str='',error:str=''):
     return '<h2>Signed in to GOTEET.</h2><p>You can close this browser tab and return to the app.</p>'
 
 @app.post('/api/google/sync')
-def google_sync():
-    settings.require('google_enabled');return google_auth.sync()
+def google_sync(value:dict={}):
+    settings.require('google_enabled');return google_auth.sync(value.get('sources'))
+
+@app.post('/api/google/profile')
+def google_profile():
+    settings.require('google_enabled');return google_auth.import_profile()
 
 @app.post('/api/google/disconnect')
 def google_disconnect():return google_auth.disconnect()
