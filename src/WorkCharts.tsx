@@ -1,16 +1,245 @@
-import {useMemo} from 'react';
-import {useReducedMotion} from 'motion/react';
-import {ResponsiveContainer,PieChart,Pie,Cell,Tooltip,BarChart,Bar,XAxis,YAxis,CartesianGrid,AreaChart,Area} from 'recharts';
-type Row=Record<string,any>;
-const colors=['#b0b7c3','#ffab65','#ff9a9a','#8cdbb1'];
-const tip={background:'var(--surface)',border:'1px solid var(--border)',borderRadius:7,color:'var(--text)',fontSize:12};
-export function WorkCharts({tasks,projects,kind,onStatus,reduced=false}:{reduced?:boolean;tasks:Row[];projects:Row[];kind:'tasks'|'projects';onStatus:(status:string)=>void}){
- const osReduced=useReducedMotion(),reduce=reduced||osReduced;const statuses=kind==='tasks'?['Todo','In progress','Blocked','Done']:['Planned','Active','At risk','Paused','Done'];
- const rows=kind==='tasks'?tasks:projects;const counts=statuses.map((name,i)=>({name,value:rows.filter(t=>t.status===name).length,color:name==='Done'?'#8cdbb1':name==='Paused'?'#b3b1ee':colors[i%colors.length]}));
- const groups=Array.from(new Set(tasks.map(t=>t.project))).slice(0,7).map(name=>({name,Done:tasks.filter(t=>t.project===name&&t.status==='Done').length,Open:tasks.filter(t=>t.project===name&&!['Done','Blocked'].includes(t.status)).length,Blocked:tasks.filter(t=>t.project===name&&t.status==='Blocked').length}));
- return <div className="work-charts"><section className="status-chart"><h2>{kind==='tasks'?'Task status':'Project status'}</h2><div className="status-chart-body"><div className="chart-ring">{rows.length?<ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={counts.filter(c=>c.value)} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius="68%" outerRadius="94%" paddingAngle={3} isAnimationActive={!reduce} animationDuration={550} onClick={(d:any)=>onStatus(d.name)}>{counts.filter(c=>c.value).map(c=><Cell key={c.name} fill={c.color} stroke="none"/>)}</Pie></PieChart></ResponsiveContainer>:<div className="empty-chart-ring"/>}<div className="chart-ring-label"><strong>{rows.length}</strong><span>{kind}</span></div></div><div className="chart-legend"><button onClick={()=>onStatus('All')}>All {kind}<strong>{rows.length}</strong></button>{counts.map(c=><button key={c.name} onClick={()=>onStatus(c.name)}><span style={{background:c.color}}/>{c.name}<strong>{c.value}</strong></button>)}</div></div><p>Click a status to filter the current records.</p></section><section className="project-chart"><h2>Tasks by project</h2>{groups.length?<div className="chart-container"><ResponsiveContainer width="100%" height="100%"><BarChart data={groups} layout="vertical" margin={{left:0,right:12,top:12,bottom:0}}><CartesianGrid stroke="var(--border)" horizontal={false}/><XAxis type="number" allowDecimals={false} tick={{fill:'var(--muted)',fontSize:10}} axisLine={false} tickLine={false}/><YAxis type="category" dataKey="name" width={105} tick={{fill:'var(--muted)',fontSize:10}} axisLine={false} tickLine={false}/><Tooltip contentStyle={tip}/><Bar dataKey="Done" stackId="a" fill="#8cdbb1" maxBarSize={18} isAnimationActive={!reduce} animationDuration={550}/><Bar dataKey="Open" stackId="a" fill="#ffab65" maxBarSize={18} isAnimationActive={!reduce} animationDuration={550}/><Bar dataKey="Blocked" stackId="a" fill="#ff9a9a" maxBarSize={18} isAnimationActive={!reduce} animationDuration={550}/></BarChart></ResponsiveContainer></div>:<p className="no-chart-data">Add tasks with project names to see the distribution.</p>}<p>Current saved tasks · Done / Open / Blocked</p></section></div>;
+import { useMemo } from 'react';
+import { useReducedMotion } from 'motion/react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  AreaChart,
+  Area,
+} from 'recharts';
+type Row = Record<string, any>;
+const colors = ['#b0b7c3', '#ffab65', '#ff9a9a', '#8cdbb1'];
+const tip = {
+  background: 'var(--surface)',
+  border: '1px solid var(--border)',
+  borderRadius: 7,
+  color: 'var(--text)',
+  fontSize: 12,
+};
+export function WorkCharts({
+  tasks,
+  projects,
+  kind,
+  onStatus,
+  reduced = false,
+}: {
+  reduced?: boolean;
+  tasks: Row[];
+  projects: Row[];
+  kind: 'tasks' | 'projects';
+  onStatus: (status: string) => void;
+}) {
+  const osReduced = useReducedMotion(),
+    reduce = reduced || osReduced;
+  const statuses =
+    kind === 'tasks'
+      ? ['Todo', 'In progress', 'Blocked', 'Done']
+      : ['Planned', 'Active', 'At risk', 'Paused', 'Done'];
+  const rows = kind === 'tasks' ? tasks : projects;
+  const counts = statuses.map((name, i) => ({
+    name,
+    value: rows.filter((t) => t.status === name).length,
+    color: name === 'Done' ? '#8cdbb1' : name === 'Paused' ? '#b3b1ee' : colors[i % colors.length],
+  }));
+  const groups = Array.from(new Set(tasks.map((t) => t.project)))
+    .slice(0, 7)
+    .map((name) => ({
+      name,
+      Done: tasks.filter((t) => t.project === name && t.status === 'Done').length,
+      Open: tasks.filter((t) => t.project === name && !['Done', 'Blocked'].includes(t.status)).length,
+      Blocked: tasks.filter((t) => t.project === name && t.status === 'Blocked').length,
+    }));
+  return (
+    <div className="work-charts">
+      <section className="status-chart">
+        <h2>{kind === 'tasks' ? 'Task status' : 'Project status'}</h2>
+        <div className="status-chart-body">
+          <div className="chart-ring">
+            {rows.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={counts.filter((c) => c.value)}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="68%"
+                    outerRadius="94%"
+                    paddingAngle={3}
+                    isAnimationActive={!reduce}
+                    animationDuration={550}
+                    onClick={(d: any) => onStatus(d.name)}
+                  >
+                    {counts
+                      .filter((c) => c.value)
+                      .map((c) => (
+                        <Cell key={c.name} fill={c.color} stroke="none" />
+                      ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="empty-chart-ring" />
+            )}
+            <div className="chart-ring-label">
+              <strong>{rows.length}</strong>
+              <span>{kind}</span>
+            </div>
+          </div>
+          <div className="chart-legend">
+            <button onClick={() => onStatus('All')}>
+              All {kind}
+              <strong>{rows.length}</strong>
+            </button>
+            {counts.map((c) => (
+              <button key={c.name} onClick={() => onStatus(c.name)}>
+                <span style={{ background: c.color }} />
+                {c.name}
+                <strong>{c.value}</strong>
+              </button>
+            ))}
+          </div>
+        </div>
+        <p>Click a status to filter the current records.</p>
+      </section>
+      <section className="project-chart">
+        <h2>Tasks by project</h2>
+        {groups.length ? (
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={groups} layout="vertical" margin={{ left: 0, right: 12, top: 12, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border)" horizontal={false} />
+                <XAxis
+                  type="number"
+                  allowDecimals={false}
+                  tick={{ fill: 'var(--muted)', fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={105}
+                  tick={{ fill: 'var(--muted)', fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip contentStyle={tip} />
+                <Bar
+                  dataKey="Done"
+                  stackId="a"
+                  fill="#8cdbb1"
+                  maxBarSize={18}
+                  isAnimationActive={!reduce}
+                  animationDuration={550}
+                />
+                <Bar
+                  dataKey="Open"
+                  stackId="a"
+                  fill="#ffab65"
+                  maxBarSize={18}
+                  isAnimationActive={!reduce}
+                  animationDuration={550}
+                />
+                <Bar
+                  dataKey="Blocked"
+                  stackId="a"
+                  fill="#ff9a9a"
+                  maxBarSize={18}
+                  isAnimationActive={!reduce}
+                  animationDuration={550}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="no-chart-data">Add tasks with project names to see the distribution.</p>
+        )}
+        <p>Current saved tasks · Done / Open / Blocked</p>
+      </section>
+    </div>
+  );
 }
-export function DevelopmentChart({repos,reduced=false}:{repos:Row[];reduced?:boolean}){
- const osReduced=useReducedMotion(),reduce=reduced||osReduced;const data=useMemo(()=>{const format=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}),now=Date.now(),days=Array.from({length:7},(_,i)=>({key:format.format(new Date(now-(6-i)*86400000)),day:new Date(now-(6-i)*86400000).toLocaleDateString('en-IN',{weekday:'short',timeZone:'Asia/Kolkata'}),commits:0}));const seen=new Set<string>();for(const repo of repos)for(const commit of repo.commits||[]){const id=(commit.url||commit.sha).split('/').at(-1);if(seen.has(id))continue;seen.add(id);const time=Date.parse(commit.date);if(!Number.isFinite(time)||time>now)continue;const day=days.find(d=>d.key===format.format(new Date(time)));if(day)day.commits++;}return days;},[repos]);
- return <section className="development-chart"><div className="section-title"><h2>Development activity</h2><span>Seven calendar days · IST</span></div><div className="chart-container"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data} margin={{left:0,right:15,top:12,bottom:0}}><CartesianGrid vertical={false} stroke="var(--border)"/><XAxis dataKey="day" tick={{fill:'var(--muted)',fontSize:11}} tickLine={false} axisLine={false}/><YAxis allowDecimals={false} tick={{fill:'var(--muted)',fontSize:10}} tickLine={false} axisLine={false} width={34}/><Tooltip contentStyle={tip}/><Area type="linear" dataKey="commits" stroke="#ffab65" fill="#ffab6520" strokeWidth={2} isAnimationActive={!reduce} animationDuration={650}/></AreaChart></ResponsiveContainer></div><p>Distinct default-branch commit IDs in captured repositories. Activity measures changes, not task completion.</p></section>;
+export function DevelopmentChart({ repos, reduced = false }: { repos: Row[]; reduced?: boolean }) {
+  const osReduced = useReducedMotion(),
+    reduce = reduced || osReduced;
+  const data = useMemo(() => {
+    const format = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }),
+      now = Date.now(),
+      days = Array.from({ length: 7 }, (_, i) => ({
+        key: format.format(new Date(now - (6 - i) * 86400000)),
+        day: new Date(now - (6 - i) * 86400000).toLocaleDateString('en-IN', {
+          weekday: 'short',
+          timeZone: 'Asia/Kolkata',
+        }),
+        commits: 0,
+      }));
+    const seen = new Set<string>();
+    for (const repo of repos)
+      for (const commit of repo.commits || []) {
+        const id = (commit.url || commit.sha).split('/').at(-1);
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const time = Date.parse(commit.date);
+        if (!Number.isFinite(time) || time > now) continue;
+        const day = days.find((d) => d.key === format.format(new Date(time)));
+        if (day) day.commits++;
+      }
+    return days;
+  }, [repos]);
+  return (
+    <section className="development-chart">
+      <div className="section-title">
+        <h2>Development activity</h2>
+        <span>Seven calendar days · IST</span>
+      </div>
+      <div className="chart-container">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ left: 0, right: 15, top: 12, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="var(--border)" />
+            <XAxis
+              dataKey="day"
+              tick={{ fill: 'var(--muted)', fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fill: 'var(--muted)', fontSize: 10 }}
+              tickLine={false}
+              axisLine={false}
+              width={34}
+            />
+            <Tooltip contentStyle={tip} />
+            <Area
+              type="linear"
+              dataKey="commits"
+              stroke="#ffab65"
+              fill="#ffab6520"
+              strokeWidth={2}
+              isAnimationActive={!reduce}
+              animationDuration={650}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <p>
+        Distinct default-branch commit IDs in captured repositories. Activity measures changes, not task
+        completion.
+      </p>
+    </section>
+  );
 }

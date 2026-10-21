@@ -1,11 +1,115 @@
-import {useEffect,useRef,useState} from 'react';
-import {ArrowLeft,ArrowRight,RefreshCw,X,Globe,ArrowUpRight} from 'lucide-react';
-export function BrowserPanel(){
- const [state,setState]=useState<any>({open:false}),[address,setAddress]=useState(''),[problem,setProblem]=useState('');const viewport=useRef<HTMLDivElement>(null);
- const command=(action:string,value?:unknown)=>window.workmate.browser(action,value).catch(e=>setProblem(String(e)));
- useEffect(()=>{const update=(v:any)=>{setState(v);setAddress(v.url||'');};window.workmate.browser('state').then(update);return window.workmate.onBrowser(update);},[]);
- useEffect(()=>{if(!state.open||!viewport.current)return;const bounds=()=>{const r=viewport.current!.getBoundingClientRect();void command('bounds',{x:r.x,y:r.y,width:r.width,height:r.height});};const observer=new ResizeObserver(bounds);observer.observe(viewport.current);window.addEventListener('resize',bounds);bounds();return()=>{observer.disconnect();window.removeEventListener('resize',bounds);};},[state.open,state.error,problem]);
- useEffect(()=>{if(!state.open)return;const listener=(e:KeyboardEvent)=>{if(e.key==='Escape')void command('close');};window.addEventListener('keydown',listener);return()=>window.removeEventListener('keydown',listener);},[state.open]);
- if(!state.open)return null;
- return <div className="browser-overlay" role="dialog" aria-label="GOTEET integrated browser"><div className="browser-shell"><header><Globe size={18}/><strong>GOTEET · Web</strong><span>{state.title}</span><button aria-label="Close browser panel" onClick={()=>command('close')}><X size={18}/></button></header><form className="browser-toolbar" onSubmit={e=>{e.preventDefault();setProblem('');command('open',address);}}><button type="button" aria-label="Browser back" disabled={!state.back} onClick={()=>command('back')}><ArrowLeft size={16}/></button><button type="button" aria-label="Browser forward" disabled={!state.forward} onClick={()=>command('forward')}><ArrowRight size={16}/></button><button type="button" aria-label={state.loading?'Stop loading page':'Reload page'} onClick={()=>command(state.loading?'stop':'reload')}>{state.loading?<X size={16}/>:<RefreshCw size={16}/>}</button><input aria-label="Web address" value={address} onChange={e=>setAddress(e.target.value)}/><button>Go</button><button type="button" onClick={()=>command('external')} title="Open in your system browser"><ArrowUpRight size={16}/>Open externally</button></form>{(problem||state.error)&&<div className="inline-note" role="alert">{problem||state.error}</div>}<div className="browser-viewport" ref={viewport}/><footer><span>{state.loading?'Loading…':'Web content · isolated from your local workspace'}</span><button onClick={()=>{if(confirm('Clear GOTEET browser cookies and sign out of websites in this panel? Your Google data connection stays connected.'))command('clear');}}>Clear web sign-ins</button></footer></div></div>;
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, RefreshCw, X, Globe, ArrowUpRight } from 'lucide-react';
+export function BrowserPanel() {
+  const [state, setState] = useState<any>({ open: false }),
+    [address, setAddress] = useState(''),
+    [problem, setProblem] = useState('');
+  const viewport = useRef<HTMLDivElement>(null);
+  const command = (action: string, value?: unknown) =>
+    window.workmate.browser(action, value).catch((e) => setProblem(String(e)));
+  useEffect(() => {
+    const update = (v: any) => {
+      setState(v);
+      setAddress(v.url || '');
+    };
+    window.workmate.browser('state').then(update);
+    return window.workmate.onBrowser(update);
+  }, []);
+  useEffect(() => {
+    if (!state.open || !viewport.current) return;
+    const bounds = () => {
+      const r = viewport.current!.getBoundingClientRect();
+      void command('bounds', { x: r.x, y: r.y, width: r.width, height: r.height });
+    };
+    const observer = new ResizeObserver(bounds);
+    observer.observe(viewport.current);
+    window.addEventListener('resize', bounds);
+    bounds();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', bounds);
+    };
+  }, [state.open, state.error, problem]);
+  useEffect(() => {
+    if (!state.open) return;
+    const listener = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') void command('close');
+    };
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, [state.open]);
+  if (!state.open) return null;
+  return (
+    <div className="browser-overlay" role="dialog" aria-label="GOTEET integrated browser">
+      <div className="browser-shell">
+        <header>
+          <Globe size={18} />
+          <strong>GOTEET · Web</strong>
+          <span>{state.title}</span>
+          <button aria-label="Close browser panel" onClick={() => command('close')}>
+            <X size={18} />
+          </button>
+        </header>
+        <form
+          className="browser-toolbar"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setProblem('');
+            command('open', address);
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Browser back"
+            disabled={!state.back}
+            onClick={() => command('back')}
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label="Browser forward"
+            disabled={!state.forward}
+            onClick={() => command('forward')}
+          >
+            <ArrowRight size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label={state.loading ? 'Stop loading page' : 'Reload page'}
+            onClick={() => command(state.loading ? 'stop' : 'reload')}
+          >
+            {state.loading ? <X size={16} /> : <RefreshCw size={16} />}
+          </button>
+          <input aria-label="Web address" value={address} onChange={(e) => setAddress(e.target.value)} />
+          <button>Go</button>
+          <button type="button" onClick={() => command('external')} title="Open in your system browser">
+            <ArrowUpRight size={16} />
+            Open externally
+          </button>
+        </form>
+        {(problem || state.error) && (
+          <div className="inline-note" role="alert">
+            {problem || state.error}
+          </div>
+        )}
+        <div className="browser-viewport" ref={viewport} />
+        <footer>
+          <span>{state.loading ? 'Loading…' : 'Web content · isolated from your local workspace'}</span>
+          <button
+            onClick={() => {
+              if (
+                confirm(
+                  'Clear GOTEET browser cookies and sign out of websites in this panel? Your Google data connection stays connected.',
+                )
+              )
+                command('clear');
+            }}
+          >
+            Clear web sign-ins
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
 }

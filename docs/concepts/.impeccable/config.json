@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-10-21T17:24:47.693Z",
+        "reason": "AIGIS Noir Atelier DESIGN.md (~/aigis-droneo/DESIGN.md) mandates Inter for UI; user asked to use the AIGIS design system"
+      }
+    ]
+  }
+}

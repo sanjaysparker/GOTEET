@@ -79,6 +79,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "electron": "^44.9.2",
     "electron-builder": "^26.15.3",
+    "prettier": "^3.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.4"
   },

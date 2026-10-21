@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GOTEET Redesign Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400;600&family=Bodoni+Moda:opsz,wght@6..96,400..500&display=swap" rel="stylesheet">
+<style>
+/* AIGIS "Noir Atelier" tokens, copied from aigis-droneo/frontend/src/theme/tokens.css */
+:root{color-scheme:dark;
+--bg:oklch(0.145 0.008 75);--surface-1:oklch(0.185 0.009 75);--surface-2:oklch(0.225 0.010 78);--surface-3:oklch(0.27 0.011 80);
+--line:oklch(0.32 0.012 80 / 0.7);--line-strong:oklch(0.42 0.015 82);
+--text:oklch(0.92 0.012 85);--text-dim:oklch(0.70 0.012 82);--text-faint:oklch(0.52 0.010 80);
+--accent:oklch(0.80 0.095 88);--accent-ink:oklch(0.22 0.04 88);--accent-dim:oklch(0.80 0.095 88 / 0.12);
+--ok:oklch(0.78 0.13 165);--warn:oklch(0.80 0.14 85);--critical:oklch(0.66 0.19 25);--info:oklch(0.74 0.10 240);--armed:oklch(0.75 0.16 60);
+--ok-dim:oklch(0.78 0.13 165 / 0.12);--warn-dim:oklch(0.80 0.14 85 / 0.12);--critical-dim:oklch(0.66 0.19 25 / 0.12);--info-dim:oklch(0.74 0.10 240 / 0.12);
+--veh-0:oklch(0.74 0.08 35);--veh-1:oklch(0.76 0.08 80);--veh-2:oklch(0.74 0.08 130);--veh-3:oklch(0.74 0.08 175);--veh-4:oklch(0.74 0.08 220);--veh-5:oklch(0.72 0.08 265);
+--font-ui:"Inter",system-ui,sans-serif;--font-mono:"JetBrains Mono",ui-monospace,monospace;--font-moment:"Bodoni Moda",Didot,serif;
+--r-ctl:2px;--r-panel:4px;--r-overlay:10px;--ease:cubic-bezier(0.22,1,0.36,1);--shadow-overlay:0 12px 40px oklch(0 0 0 / 0.45)}
+:root[data-theme="light"]{color-scheme:light;--bg:oklch(0.96 0.008 85);--surface-1:oklch(0.985 0.006 85);--surface-2:oklch(0.93 0.009 85);--surface-3:oklch(0.90 0.010 85);--line:oklch(0.80 0.012 82 / 0.8);--line-strong:oklch(0.66 0.015 82);--text:oklch(0.22 0.012 80);--text-dim:oklch(0.44 0.012 80);--text-faint:oklch(0.60 0.010 80);--accent:oklch(0.62 0.105 88);--accent-ink:oklch(0.98 0.01 88);--accent-dim:oklch(0.62 0.105 88 / 0.14);--ok:oklch(0.58 0.13 165);--warn:oklch(0.62 0.14 85);--critical:oklch(0.54 0.19 25);--info:oklch(0.54 0.10 240);--shadow-overlay:0 12px 40px oklch(0 0 0 / 0.18)}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:450 13px/1.45 var(--font-ui);-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:1px solid var(--accent);outline-offset:1px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.micro{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);font-weight:550}
+.moment{font-family:var(--font-moment);font-weight:450;letter-spacing:-.01em}
+.dim{color:var(--text-dim)}.faint{color:var(--text-faint)}
+.btn{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r-ctl);font-size:12px;transition:background var(--ease) 150ms}
+.btn:hover{background:var(--surface-3);border-color:var(--line-strong)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:550}
+.btn.sm{height:22px;padding:0 7px;font-size:11px}
+.kbd{font:11px var(--font-mono);border:1px solid var(--line);border-radius:2px;padding:0 4px;color:var(--text-faint)}
+.chip{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 6px;border:1px solid var(--line);border-radius:2px;font-size:11px;color:var(--text-dim)}
+.ico{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6;flex:none}
+
+/* concept chrome (not part of the app) */
+#chrome{position:fixed;inset:0 0 auto 0;height:40px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--surface-1);z-index:50}
+#chrome .seg{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden}
+#chrome .seg button{padding:4px 10px;font-size:12px;border-right:1px solid var(--line)}
+#chrome .seg button:last-child{border-right:0}
+#chrome .seg button[aria-pressed=true]{background:var(--surface-3);box-shadow:inset 0 -2px 0 var(--accent)}
+#app{position:fixed;inset:40px 0 0 0;display:grid}
+
+/* shared pieces */
+.nav-item{display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;border-radius:2px;color:var(--text-dim);width:100%;text-align:left;font-size:12.5px}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item[aria-current=true]{background:var(--surface-2);color:var(--text);box-shadow:inset 2px 0 0 var(--accent)}
+.nav-item .n{margin-left:auto;font:11px var(--font-mono);color:var(--text-faint)}
+.head{display:flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-bottom:1px solid var(--line);flex:none}
+.head h1{font-size:13px;font-weight:600}
+.crumb{color:var(--text-faint)}
+.scroll{overflow:auto;min-height:0}
+.panel{background:var(--surface-1);border:1px solid var(--line);border-radius:var(--r-panel);position:relative}
+.ticks::before,.ticks::after{content:"";position:absolute;width:8px;height:8px;border:1px solid var(--accent);pointer-events:none}
+.ticks::before{top:-1px;left:-1px;border-right:0;border-bottom:0}.ticks::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+
+/* issue rows */
+.grp{display:flex;align-items:center;gap:8px;height:32px;padding:0 16px;background:var(--surface-1);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1}
+.row{display:grid;grid-template-columns:22px 70px 18px 1fr auto auto 22px;align-items:center;gap:10px;height:36px;padding:0 16px;border-bottom:1px solid var(--line);cursor:pointer;width:100%;text-align:left}
+.row:hover{background:var(--surface-2)}
+.row[aria-selected=true]{background:var(--surface-2);box-shadow:inset 2px 0 0 var(--accent)}
+.key{font:11px var(--font-mono);color:var(--text-faint)}
+.title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:9.5px;font-weight:650;color:var(--accent-ink)}
+.prio{display:flex;gap:1.5px;align-items:flex-end;height:12px}.prio i{width:3px;background:var(--line-strong);border-radius:1px}.prio i.on{background:var(--text-dim)}
+.prio.urgent{width:14px;height:14px;border-radius:2px;background:var(--critical);color:var(--bg);font:700 10px var(--font-mono);display:grid;place-items:center}
+.st{width:14px;height:14px}
+/* board */
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:280px;gap:10px;padding:14px 16px;align-items:start;height:100%}
+.col{background:var(--surface-1);border:1px solid var(--line);border-radius:var(--r-panel);display:flex;flex-direction:column;max-height:100%}
+.col h3{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;padding:9px 10px;border-bottom:1px solid var(--line)}
+.card{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-panel);padding:8px 10px;margin:8px 8px 0;cursor:grab;text-align:left;width:calc(100% - 16px)}
+.card:hover{border-color:var(--line-strong)}
+.card:last-child{margin-bottom:8px}
+.card .t{margin:3px 0 7px;line-height:1.35}
+.card .m{display:flex;align-items:center;gap:6px}
+/* peek */
+.peek{border-left:1px solid var(--line);background:var(--surface-1);display:flex;flex-direction:column;min-width:0}
+.prop{display:grid;grid-template-columns:96px 1fr;align-items:center;height:30px;font-size:12px}
+.prop .faint{font-size:11.5px}
+.dbl{border:0;height:5px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:14px 0}
+.act{display:flex;gap:8px;font-size:12px;padding:6px 0}
+.agentcard{border:1px solid var(--line-strong);border-radius:var(--r-panel);background:var(--surface-2);padding:10px;margin-top:10px}
+/* chat */
+.msg{display:grid;grid-template-columns:28px 1fr;gap:10px;padding:8px 16px}
+.msg:hover{background:var(--surface-1)}
+.msg .who{font-weight:600;font-size:12.5px}.msg .when{font:11px var(--font-mono);color:var(--text-faint);margin-left:6px}
+.embed{margin-top:6px;border:1px solid var(--line);border-left:2px solid var(--accent);border-radius:2px;padding:6px 10px;background:var(--surface-1);font-size:12px;display:flex;gap:8px;align-items:center;max-width:520px}
+.composer{margin:10px 16px 14px;border:1px solid var(--line);border-radius:var(--r-panel);background:var(--surface-1)}
+.composer textarea{width:100%;background:none;border:0;color:var(--text);font:inherit;padding:10px 12px;resize:none;height:44px;outline:none}
+.composer .bar{display:flex;align-items:center;gap:6px;padding:6px 8px;border-top:1px solid var(--line)}
+/* gantt */
+.gantt{display:grid;grid-template-columns:220px 1fr;min-width:900px}
+.gantt .lab{height:34px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--line);gap:8px;font-size:12px}
+.gantt .lane{height:34px;border-bottom:1px solid var(--line);position:relative;background-image:repeating-linear-gradient(90deg,transparent 0 calc(100%/14 - 1px),var(--line) calc(100%/14 - 1px) calc(100%/14))}
+.gbar{position:absolute;top:8px;height:18px;border-radius:2px;background:var(--surface-3);border:1px solid var(--line-strong);font-size:11px;padding:0 6px;display:flex;align-items:center;white-space:nowrap;overflow:hidden}
+.gbar .fill{position:absolute;inset:0 auto 0 0;background:var(--accent-dim)}
+.today{position:absolute;top:0;bottom:0;width:1px;background:var(--critical);z-index:2}
+.diamond{position:absolute;top:11px;width:11px;height:11px;transform:rotate(45deg);background:var(--accent)}
+/* home */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:var(--r-panel);background:var(--surface-1)}
+.stat{padding:12px 14px;border-right:1px solid var(--line)}.stat:last-child{border-right:0}
+.stat .v{font:600 22px var(--font-mono);margin-top:4px}.stat .v small{font:11px var(--font-ui);color:var(--text-faint);margin-left:4px;letter-spacing:.06em;text-transform:uppercase}
+.stat .rule{height:2px;width:24px;margin-top:8px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px}
+.lst{container-type:inline-size}
+@container (max-width:620px){.row{grid-template-columns:22px 62px 18px 1fr 22px}.row .lbls,.row .cyc{display:none}}
+.li{display:flex;align-items:center;gap:10px;height:34px;padding:0 12px;border-bottom:1px solid var(--line);font-size:12.5px}
+.li:last-child{border-bottom:0}
+/* doc */
+.doc{max-width:720px;margin:0 auto;padding:36px 24px 80px}
+.doc h1{font:450 32px/1.15 var(--font-moment);margin:8px 0 6px}
+.doc h2{font-size:15px;font-weight:650;margin:22px 0 6px}
+.doc p,.doc li{color:var(--text-dim);font-size:14px;line-height:1.65}
+.doc ul{padding-left:20px}
+.blk{border:1px solid var(--line);border-radius:var(--r-panel);padding:8px 12px;margin:10px 0;background:var(--surface-1);font-size:12.5px}
+/* palette */
+#pal{position:fixed;inset:0;background:oklch(0 0 0 / .35);backdrop-filter:blur(12px);display:none;z-index:80;place-items:start center;padding-top:14vh}
+#pal.open{display:grid}
+#pal .box{width:600px;background:var(--surface-3);border:1px solid var(--line-strong);border-radius:var(--r-overlay);box-shadow:var(--shadow-overlay);overflow:hidden;animation:pop 180ms var(--ease)}
+@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.985)}}
+#pal input{width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:14px 16px;color:var(--text);font:15px var(--font-ui);outline:none}
+#pal .opt{display:flex;align-items:center;gap:10px;height:34px;padding:0 16px;font-size:13px;width:100%;text-align:left}
+#pal .opt[aria-selected=true]{background:var(--surface-2);box-shadow:inset 2px 0 0 var(--accent)}
+#pal .opt .kbd{margin-left:auto}
+/* hub shell */
+.rail{background:var(--surface-1);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px}
+.rail button{width:56px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--text-faint);position:relative}
+.rail button:hover{color:var(--text)}
+.rail button[aria-current=true]{color:var(--accent)}
+.rail button[aria-current=true]::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:2px;background:var(--accent)}
+.rail .ico{width:18px;height:18px}
+.badge{position:absolute;top:7px;right:12px;min-width:14px;height:14px;border-radius:7px;background:var(--critical);color:var(--bg);font:600 9px var(--font-mono);display:grid;place-items:center;padding:0 3px}
+/* dock shell */
+.topbar{height:44px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;padding:0 12px;background:var(--surface-1)}
+.wtab{height:44px;padding:0 12px;font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:6px}
+.wtab[aria-current=true]{color:var(--text);box-shadow:inset 0 -2px 0 var(--accent)}
+.status{height:24px;border-top:1px solid var(--line);background:var(--surface-1);display:flex;align-items:center;gap:14px;padding:0 12px;font:11px var(--font-mono);color:var(--text-faint)}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:5px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--surface-3);border:1px solid var(--line-strong);border-radius:var(--r-overlay);padding:8px 14px;font-size:12px;box-shadow:var(--shadow-overlay);z-index:90;display:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="chrome">
+  <span class="moment" style="font-size:17px">GOTEET</span><span class="micro">Concepts · sample data</span>
+  <span style="flex:1"></span>
+  <span class="micro">Shell</span>
+  <div class="seg" id="shells">
+    <button data-s="ledger" aria-pressed="true">A · Ledger</button>
+    <button data-s="hub" aria-pressed="false">B · Hub</button>
+    <button data-s="dock" aria-pressed="false">C · Atelier dock</button>
+  </div>
+  <button class="btn sm" id="theme">Light</button>
+  <button class="btn sm" onclick="openPal()">Command <span class="kbd">⌘K</span></button>
+</div>
+<div id="app"></div>
+<div id="pal" onclick="if(event.target===this)closePal()"><div class="box" role="dialog" aria-label="Command palette"><input id="palq" placeholder="Type a command, issue key, person or ask the agent…" autocomplete="off"><div id="palres" style="padding:6px 0;max-height:360px;overflow:auto"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const I={
+ inbox:'<path d="M3 13h4l2 3h6l2-3h4M5 5h14l2 8v6H3v-6z"/>',
+ issue:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/>',
+ board:'<rect x="3" y="4" width="5" height="16"/><rect x="10" y="4" width="5" height="10"/><rect x="17" y="4" width="4" height="13"/>',
+ cycle:'<path d="M20 12a8 8 0 1 1-3-6.2M20 4v5h-5"/>',
+ road:'<path d="M3 6h10M7 12h12M5 18h8"/>',
+ chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+ doc:'<path d="M6 3h9l4 4v14H6z M15 3v4h4 M9 12h7 M9 16h7"/>',
+ home:'<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>',
+ agent:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+ cal:'<rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+ files:'<path d="M3 6h7l2 2h9v12H3z"/>',
+ auto:'<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ search:'<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+ git:'<circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 8v8M18 10c0 4-6 3-10 6"/>',
+ filter:'<path d="M4 5h16l-6 8v6l-4-2v-4z"/>',
+ hash:'<path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/>',
+ video:'<rect x="3" y="6" width="13" height="12"/><path d="M16 10l5-3v10l-5-3"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+ target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
+ clock:'<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'
+};
+const ic=(n,s='')=>`<svg class="ico" viewBox="0 0 24 24" style="${s}">${I[n]}</svg>`;
+const P={S:['Sanju','var(--veh-1)'],A:['Arjun','var(--veh-4)'],M:['Meera','var(--veh-3)'],R:['Ravi','var(--veh-0)'],K:['Kiran','var(--veh-5)'],G:['Agent','var(--accent)']};
+const av=k=>`<span class="av" style="background:${P[k][1]}" title="${P[k][0]}">${k==='G'?'✦':k}</span>`;
+const ST={backlog:['Backlog','var(--text-faint)',0],todo:['Todo','var(--text-dim)',0],prog:['In progress','var(--warn)',.5],review:['In review','var(--info)',.75],done:['Done','var(--ok)',1],blocked:['Blocked','var(--critical)',0]};
+function stIcon(s){const [,c,f]=ST[s];if(s==='done')return `<svg class="st" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="${c}"/><path d="M4 7l2 2 4-4" stroke="var(--bg)" stroke-width="1.6" fill="none"/></svg>`;if(s==='blocked')return `<svg class="st" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="none" stroke="${c}" stroke-width="1.5"/><path d="M3 11l8-8" stroke="${c}" stroke-width="1.5"/></svg>`;const dash=s==='backlog'?'2 2':'0';const a=f*2*Math.PI*3;return `<svg class="st" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="${dash}"/><circle cx="7" cy="7" r="3" fill="none" stroke="${c}" stroke-width="6" stroke-dasharray="${a} 99" transform="rotate(-90 7 7)" opacity="${f?1:0}"/></svg>`}
+const prio=p=>p===4?'<span class="prio urgent" title="Urgent">!</span>':`<span class="prio" title="P${p}">${[1,2,3].map(i=>`<i class="${i<=p?'on':''}" style="height:${i*4}px"></i>`).join('')}</span>`;
+const LB={sitl:'var(--veh-3)',ui:'var(--veh-5)',bug:'var(--critical)',agent:'var(--accent)',infra:'var(--veh-4)',google:'var(--veh-2)'};
+const lab=l=>`<span class="chip"><span class="dot" style="background:${LB[l]};margin:0"></span>${l}</span>`;
+const ISS=[
+ {k:'AIG-142',t:'Guardian veto suggestion ignored when climb target exceeds fence ceiling',s:'prog',p:4,a:'S',l:['bug','sitl'],c:'Cycle 18',pr:'#311',e:3},
+ {k:'AIG-139',t:'Survey mark → fly_survey loses last leg on concave polygons',s:'review',p:3,a:'A',l:['sitl'],c:'Cycle 18',pr:'#308',e:5},
+ {k:'AIG-137',t:'CRSF link doctor: report ELRS packet rate in Links panel',s:'todo',p:2,a:'M',l:['infra'],c:'Cycle 18',e:2},
+ {k:'AIG-131',t:'Nemotron tool_call recovery in streaming path drops parameters',s:'blocked',p:3,a:'G',l:['agent','bug'],c:'Cycle 18',e:3},
+ {k:'GOT-58',t:'Rewrite main.tsx into feature modules (59 KB single component)',s:'prog',p:3,a:'S',l:['ui'],c:'Cycle 18',e:8},
+ {k:'GOT-55',t:'Drive reader: bounded download with resumable progress',s:'todo',p:2,a:'K',l:['google'],c:'Cycle 18',e:3},
+ {k:'GOT-51',t:'Assistant composer: IME composition must not submit',s:'done',p:2,a:'S',l:['ui','bug'],c:'Cycle 17',e:1},
+ {k:'GOT-49',t:'Team chat: convert message to issue keeps thread link',s:'review',p:2,a:'R',l:['ui'],c:'Cycle 18',e:2},
+ {k:'SIM-22',t:'droneos-sim: CI failing on Gazebo plugin build',s:'blocked',p:4,a:'R',l:['infra','bug'],c:'Cycle 18',pr:'#44',e:2},
+ {k:'SIM-19',t:'Wind model presets for tailsitter transition tests',s:'backlog',p:1,a:'K',l:['sitl'],c:'—',e:5},
+ {k:'GOT-60',t:'Automations: when PR merges, move linked issue to Done',s:'backlog',p:2,a:'G',l:['agent'],c:'—',e:3},
+ {k:'AIG-144',t:'OpenGlobus marks render 2 px offset at high zoom',s:'todo',p:1,a:'A',l:['ui'],c:'Cycle 18',e:1},
+];
+const state={shell:'ledger',view:'issues',sel:'AIG-142',layout:'list',chan:'aigis-dev',peek:true};
+
+/* ---------- screens (shared by all shells) ---------- */
+function issuesList(){const order=['prog','review','blocked','todo','backlog','done'];return order.map(s=>{const g=ISS.filter(i=>i.s===s);if(!g.length)return'';return `<div class="grp">${stIcon(s)}<b style="font-size:12px;font-weight:600">${ST[s][0]}</b><span class="mono faint" style="font-size:11px">${g.length}</span><span style="flex:1"></span><button class="btn sm" aria-label="Add issue to ${ST[s][0]}">${ic('plus')}</button></div>`+g.map(i=>`<button class="row" aria-selected="${state.sel===i.k}" onclick="pick('${i.k}')">${prio(i.p)}<span class="key">${i.k}</span>${stIcon(i.s)}<span class="title">${i.t}</span><span class="lbls" style="display:flex;gap:4px">${i.l.map(lab).join('')}${i.pr?`<span class="chip">${ic('git','width:11px;height:11px')}${i.pr}</span>`:''}</span><span class="cyc mono faint" style="font-size:11px">${i.c}</span>${av(i.a)}</button>`).join('')}).join('')}
+function issuesBoard(){const cols=['backlog','todo','prog','review','blocked','done'];return `<div class="board">${cols.map(s=>{const g=ISS.filter(i=>i.s===s);return `<div class="col" ondragover="event.preventDefault()" ondrop="drop(event,'${s}')"><h3>${stIcon(s)}${ST[s][0]}<span class="mono faint" style="font-weight:400">${g.length}</span><span style="flex:1"></span><span class="mono faint" style="font-weight:400;font-size:11px">${g.reduce((a,i)=>a+i.e,0)} pt</span></h3><div class="scroll">${g.map(i=>`<button class="card" draggable="true" ondragstart="event.dataTransfer.setData('k','${i.k}')" onclick="pick('${i.k}')"><div class="m"><span class="key">${i.k}</span><span style="flex:1"></span>${av(i.a)}</div><div class="t">${i.t}</div><div class="m">${prio(i.p)}${i.l.slice(0,2).map(lab).join('')}<span style="flex:1"></span><span class="mono faint" style="font-size:11px">${i.e}pt</span></div></button>`).join('')}</div></div>`}).join('')}</div>`}
+function viewBar(){const c=state.shell==='dock';return `<div style="display:flex;gap:6px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);white-space:nowrap"><div class="seg" style="display:flex;border:1px solid var(--line);border-radius:2px">${['list','board'].map(l=>`<button class="btn sm" style="border:0;border-radius:0;${state.layout===l?'background:var(--surface-3);box-shadow:inset 0 -2px 0 var(--accent)':''}" onclick="state.layout='${l}';render()">${ic(l==='list'?'road':'board')}${l[0].toUpperCase()+l.slice(1)}</button>`).join('')}</div><button class="btn sm">${ic('filter')}Filter</button><span class="chip">Cycle 18 ✕</span>${c?'':'<span class="chip">Team: AIGIS + GOTEET ✕</span>'}<span style="flex:1"></span>${c?'':'<span class="micro">Saved view</span><button class="btn sm">My open work</button>'}<button class="btn sm primary" onclick="toast('New issue: press C anywhere')">${ic('plus')}New issue <span class="kbd" style="color:var(--accent-ink);border-color:oklch(0 0 0 / .2)">C</span></button></div>`}
+function peek(){const i=ISS.find(x=>x.k===state.sel);if(!i||!state.peek)return'';return `<aside class="peek"><div class="head"><span class="key">${i.k}</span><span style="flex:1"></span><button class="btn sm" onclick="toast('Opened full page')">Open</button><button class="btn sm" aria-label="Close" onclick="state.peek=false;render()">✕</button></div><div class="scroll" style="padding:14px 16px;flex:1">
+<div style="font-size:16px;font-weight:600;line-height:1.35">${i.t}</div>
+<p class="dim" style="margin:8px 0 12px;font-size:12.5px">Repro on SITL copter 101: fence ceiling 120 m, mission leg at 110 m, Guardian vetoes with <span class="mono">required_alt_m=135</span>. Automation retries the climb and loops until timeout.</p>
+<div class="prop"><span class="faint">Status</span><span style="display:flex;gap:6px;align-items:center">${stIcon(i.s)}${ST[i.s][0]}</span></div>
+<div class="prop"><span class="faint">Priority</span><span style="display:flex;gap:6px;align-items:center">${prio(i.p)}${['','Low','Medium','High','Urgent'][i.p]}</span></div>
+<div class="prop"><span class="faint">Assignee</span><span style="display:flex;gap:6px;align-items:center">${av(i.a)}${P[i.a][0]}</span></div>
+<div class="prop"><span class="faint">Cycle</span><span class="mono">${i.c}</span></div>
+<div class="prop"><span class="faint">Estimate</span><span class="mono">${i.e} pt</span></div>
+<div class="prop"><span class="faint">Labels</span><span style="display:flex;gap:4px">${i.l.map(lab).join('')}</span></div>
+<div class="prop"><span class="faint">Relations</span><span class="dim">blocks <span class="key">AIG-139</span></span></div>
+${i.pr?`<div class="prop"><span class="faint">Pull request</span><span style="display:flex;gap:6px;align-items:center">${ic('git')}<span class="mono">aigis-gcs-droneo${i.pr}</span><span class="chip" style="color:var(--critical);border-color:var(--critical)">CI ✕</span></span></div>`:''}
+<hr class="dbl">
+<div class="micro" style="margin-bottom:6px">Sub-issues · 1 / 3</div>
+<div class="act">${stIcon('done')}Clamp suggestion to fence ceiling</div><div class="act">${stIcon('prog')}Return veto reason <span class="mono">fence_ceiling</span> to agent</div><div class="act">${stIcon('todo')}pytest: guardian_fence_ceiling</div>
+<div class="agentcard"><div style="display:flex;gap:6px;align-items:center;font-weight:600;font-size:12px">${ic('agent','color:var(--accent)')}Agent proposal <span class="chip" style="margin-left:auto">Needs review</span></div><p class="dim" style="font-size:12px;margin:6px 0 8px">Split into 2 issues, set due 24 Oct (IST), link PR #311. Nothing changes until you apply.</p><div style="display:flex;gap:6px"><button class="btn sm primary" onclick="toast('Applied 3 changes · audit logged')">Apply 3 changes</button><button class="btn sm">Review diff</button><button class="btn sm">Dismiss</button></div></div>
+<hr class="dbl">
+<div class="micro" style="margin-bottom:6px">Activity</div>
+<div class="act">${av('A')}<span><b>Arjun</b> <span class="dim">linked PR #311</span> <span class="mono faint">2h</span></span></div>
+<div class="act">${av('S')}<span><b>Sanju</b> <span class="dim">moved to In progress</span> <span class="mono faint">5h</span></span></div>
+<div class="act">${av('G')}<span><b>Agent</b> <span class="dim">triaged from #aigis-dev message</span> <span class="mono faint">1d</span></span></div>
+</div><div class="composer" style="margin:0 12px 12px"><textarea placeholder="Comment… @mention, / for commands"></textarea></div></aside>`}
+function home(){return `<div class="scroll" style="padding:22px 24px"><div class="micro">Tuesday 21 Oct · Asia/Kolkata</div><h2 class="moment" style="font-size:30px;margin:4px 0 16px">Good evening, Sanju.</h2>
+<div class="stats">${[['Assigned to me','4','open','var(--accent)'],['Cycle 18','62','% done','var(--ok)'],['Blocked','2','issues','var(--critical)'],['Unread','7','mentions','var(--info)']].map(([a,b,c,d])=>`<div class="stat"><div class="micro">${a}</div><div class="v">${b}<small>${c}</small></div><div class="rule" style="background:${d}"></div></div>`).join('')}</div>
+<div class="grid2" style="margin-top:12px"><div class="panel"><div class="head" style="height:38px"><span class="micro">My focus · agent-ranked</span><span style="flex:1"></span><span class="faint" style="font-size:11px">why? ranked by priority, due, blockers</span></div>${ISS.filter(i=>i.a==='S'||i.p===4).slice(0,5).map(i=>`<button class="li" style="width:100%;text-align:left" onclick="go('issues');pick('${i.k}')">${prio(i.p)}<span class="key">${i.k}</span>${stIcon(i.s)}<span class="title" style="flex:1">${i.t}</span>${av(i.a)}</button>`).join('')}</div>
+<div class="panel"><div class="head" style="height:38px"><span class="micro">Today</span></div>${[['10:30','Standup · AIGIS','video'],['14:00','SITL survey review','cal'],['17:30','Investor deck sync','video']].map(([t,n,x])=>`<div class="li"><span class="mono faint" style="width:40px">${t}</span>${ic(x)}<span style="flex:1">${n}</span><button class="btn sm">Join</button></div>`).join('')}<div class="head" style="height:38px;border-top:1px solid var(--line)"><span class="micro">Cycle 18 burn-up</span></div><div style="padding:8px 12px 12px">${burn()}</div></div></div>
+<div class="panel" style="margin-top:12px"><div class="head" style="height:38px"><span class="micro">Project health</span></div>${[['AIGIS GCS','On track','var(--ok)',68,'15 Nov'],['GOTEET 1.0','At risk','var(--warn)',41,'30 Nov'],['droneos-sim','Off track','var(--critical)',22,'—']].map(([n,h,c,p,d])=>`<div class="li"><span style="width:160px;font-weight:550">${n}</span><span class="chip" style="color:${c};border-color:${c}">${h}</span><span style="flex:1;height:4px;background:var(--surface-3);border-radius:2px;margin:0 12px"><span style="display:block;height:4px;width:${p}%;background:${c};border-radius:2px"></span></span><span class="mono dim" style="width:40px">${p}%</span><span class="mono faint" style="width:56px">${d}</span></div>`).join('')}</div></div>`}
+function burn(){const done=[2,4,5,9,12,14,18,21,24],scope=[30,30,32,32,34,34,36,36,36];const W=300,H=90,x=i=>i*W/13,y=v=>H-v*H/40;return `<svg viewBox="0 0 ${W} ${H+14}" width="100%" style="max-width:420px;display:block" role="img" aria-label="Burn-up: 24 of 36 points done"><path d="M0 ${y(0)}H${W}" stroke="var(--line)"/>${[0,10,20,30].map(v=>`<text x="${W}" y="${y(v)-2}" text-anchor="end" font-size="8" fill="var(--text-faint)" font-family="JetBrains Mono">${v}</text>`).join('')}<polyline fill="none" stroke="var(--text-faint)" stroke-dasharray="3 3" points="${scope.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}"/><polyline fill="none" stroke="var(--accent)" stroke-width="1.6" points="${done.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}"/><circle cx="${x(8)}" cy="${y(24)}" r="2.5" fill="var(--accent)"/><text x="${x(8)+5}" y="${y(24)+3}" font-size="9" fill="var(--text)" font-family="JetBrains Mono">24/36 pt</text><text x="0" y="${H+12}" font-size="8" fill="var(--text-faint)" font-family="JetBrains Mono">13 Oct</text><text x="${W}" y="${H+12}" text-anchor="end" font-size="8" fill="var(--text-faint)" font-family="JetBrains Mono">26 Oct</text></svg>`}
+function roadmap(){const rows=[['AIGIS GCS',[['Guardian v2',0,5,1],['Mark missions',3,9,.6],['Release 2.4',10,10,'m']]],['GOTEET 1.0',[['Frontend rewrite',1,8,.3],['Issues + cycles',4,10,.1],['Chat + calls',7,13,0]]],['droneos-sim',[['CI recovery',0,3,.2],['Wind presets',5,11,0]]],['SwarmRT',[['Runtime spike',2,12,.15]]]];const d=['13','14','15','16','17','18','19','20','21','22','23','24','25','26'];return `<div class="scroll" style="height:100%"><div class="gantt"><div class="lab micro" style="background:var(--surface-1)">Project / milestone</div><div class="lane" style="background:var(--surface-1);display:grid;grid-template-columns:repeat(14,1fr);background-image:none">${d.map(x=>`<span class="mono faint" style="font-size:11px;padding:10px 0 0 4px;border-left:1px solid var(--line)">${x}</span>`).join('')}</div>${rows.map(([p,ms])=>`<div class="lab" style="font-weight:600">${p}</div><div class="lane"><div class="today" style="left:${8.5/14*100}%"></div></div>`+ms.map(([n,a,b,f])=>`<div class="lab dim" style="padding-left:30px">${n}</div><div class="lane">${f==='m'?`<span class="diamond" style="left:calc(${a/14*100}% + 10px)" title="${n}"></span>`:`<div class="gbar" style="left:${a/14*100}%;width:${(b-a+1)/14*100}%"><span class="fill" style="width:${f*100}%"></span><span style="position:relative">${n} · <span class="mono">${Math.round(f*100)}%</span></span></div>`}<div class="today" style="left:${8.5/14*100}%"></div></div>`).join('')).join('')}</div></div>`}
+function chat(compact=false){const ch=state.chan;const msgs=[['A','09:12','Survey mark mission dropped the last leg again on the quarry polygon. Log attached.',null],['S','09:20','Concave case. Can you open an issue and link the log?',null],['G','09:20','Created from this thread — awaiting Arjun.',{k:'AIG-139',t:'Survey mark → fly_survey loses last leg on concave polygons'}],['M','11:02','ELRS 500 Hz packet rate shows as 0 in Links panel. Ticket?',null],['S','11:05','Yes, low priority. Meeting at 14:00 to review SITL runs.',null],['G','11:05','Meeting notes will be summarised into #aigis-dev with action items as draft issues (not created until reviewed).',null]];return `<div style="display:flex;flex-direction:column;height:100%">${compact?'':`<div class="head">${ic('hash')}<h1>${ch}</h1><span class="faint" style="font-size:12px">6 members · linked to project AIGIS GCS</span><span style="flex:1"></span><button class="btn sm">${ic('video')}Meet</button><button class="btn sm">Files</button><button class="btn sm">Issues · 4</button></div>`}<div class="scroll" style="flex:1;padding:8px 0;min-height:0"><div class="micro" style="text-align:center;margin:6px 0 10px">Today</div>${msgs.map(([w,t,x,e])=>`<div class="msg">${av(w)}<div><span class="who">${P[w][0]}</span><span class="when">${t}</span><div class="dim" style="font-size:13px">${x}</div>${e?`<button class="embed" onclick="go('issues');pick('${e.k}')">${stIcon('review')}<span class="key">${e.k}</span><span>${e.t}</span></button>`:''}</div></div>`).join('')}<div class="msg"><span></span><div style="display:flex;gap:6px"><span class="chip">↳ 3 replies</span><span class="chip">👍 2</span></div></div></div><div class="composer"><textarea placeholder="Message #${ch} — Enter sends · Shift+Enter newline · /issue to file"></textarea><div class="bar"><button class="btn sm">+</button><button class="btn sm">@</button><button class="btn sm">/issue</button><span style="flex:1"></span><button class="btn sm primary">Send</button></div></div></div>`}
+function inbox(){const n=[['G','AIG-131','Agent blocked: needs Nemotron fixture','blocked','4m'],['A','AIG-142','Arjun mentioned you: "fence ceiling clamp ready?"','prog','2h'],['R','SIM-22','CI failed on main · droneos-sim','blocked','3h'],['M','#aigis-dev','Meera: ELRS packet rate ticket?','todo','6h'],['K','GOT-55','Kiran assigned you as reviewer','review','1d']];return `<div class="scroll">${n.map(([w,k,t,s,a],j)=>`<button class="row" style="grid-template-columns:20px 70px 14px 1fr auto auto" onclick="toast('Opened ${k}')">${av(w)}<span class="key">${k}</span>${stIcon(s)}<span class="title" style="${j<3?'font-weight:550':''}">${t}</span><span class="mono faint" style="font-size:11px">${a}</span><span class="btn sm">Snooze</span></button>`).join('')}</div>`}
+function docs(){return `<div class="scroll" style="height:100%"><div class="doc"><div class="micro">Docs · AIGIS GCS · edited 2h ago</div><h1>Guardian v2 — design note</h1><p class="faint" style="font-size:12px">Sanju · linked: AIG-142, AIG-139 · 3 comments</p><h2>Problem</h2><p>Veto suggestions can exceed hard limits. A suggestion must always be satisfiable within the active fence.</p><div class="blk">${stIcon('prog')} <span class="key">AIG-142</span> Guardian veto suggestion ignored when climb target exceeds fence ceiling ${av('S')}</div><h2>Decision</h2><ul><li>Clamp <span class="mono">required_alt_m</span> to fence ceiling minus 5 m margin.</li><li>Return reason code <span class="mono">fence_ceiling</span> so automation can abort instead of loop.</li></ul><div class="blk" style="border-left:2px solid var(--accent)"><b style="font-size:12px">${ic('agent','color:var(--accent);vertical-align:-2px')} Agent summary</b><div class="dim" style="margin-top:4px">2 open questions · 1 decision · 3 action items. Draft issues ready for review.</div></div></div></div>`}
+function automations(){const r=[['When a PR linked to an issue merges','Move issue to Done','On',41],['When CI fails on main','Create Urgent issue in owning team · notify channel','On',3],['When a message gets ✅ reaction','Draft an issue (needs review)','On',7],['Every Friday 17:00 IST','Weekly report: cycle progress + blockers','On',2],['When issue is Blocked > 48h','Ping assignee and lead','Off',0]];return `<div class="scroll" style="padding:18px 24px"><div class="micro" style="margin-bottom:8px">Rules · run locally · every run audited</div><div class="panel">${r.map(([w,t,s,n])=>`<div class="li" style="height:46px">${ic('auto','color:var(--accent)')}<span style="flex:1"><b style="font-weight:550">${w}</b><br><span class="dim" style="font-size:12px">→ ${t}</span></span><span class="mono faint" style="font-size:11px;width:70px">${n} runs</span><span class="chip" style="${s==='On'?'color:var(--ok);border-color:var(--ok)':''}">${s}</span></div>`).join('')}</div></div>`}
+function agent(){return `<div style="display:flex;flex-direction:column;height:100%"><div class="head">${ic('agent','color:var(--accent)')}<h1>Agent</h1><span class="chip">Command · review first</span><span style="flex:1"></span><span class="chip mono">claude-sonnet-5-5</span></div><div class="scroll" style="flex:1;padding:16px"><div class="panel" style="padding:10px 12px;margin-bottom:10px">What is blocking Cycle 18?</div><div style="padding:0 4px" class="dim"><p>2 blocked issues hold 5 pt (14% of scope):</p><p style="margin-top:6px"><span class="key">SIM-22</span> CI failing on Gazebo plugin · <span class="key">AIG-131</span> needs a Nemotron fixture.</p><p class="faint" style="font-size:11px;margin-top:6px">Sources: issues (live) · GitHub checks captured 21 Oct 22:40 IST</p></div><div class="agentcard"><b style="font-size:12px">Proposed plan · 2 changes</b><div class="act">${stIcon('todo')} Assign SIM-22 to Ravi, due 23 Oct</div><div class="act">${stIcon('todo')} Create GOT-61 “Nemotron fixture” blocking AIG-131</div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn sm primary" onclick="toast('Applied · audit logged')">Apply</button><button class="btn sm">Edit</button></div></div></div><div class="composer"><textarea placeholder="Ask or command… Enter sends · Shift+Enter newline"></textarea></div></div>`}
+const VIEWS={home:['Home','home',home],inbox:['Inbox','inbox',inbox],issues:['Issues','issue',null],cycles:['Cycles','cycle',null],roadmap:['Roadmap','road',roadmap],chat:['Chat','chat',chat],docs:['Docs','doc',docs],auto:['Automations','auto',automations],agent:['Agent','agent',agent]};
+function mainView(withPeek=true){if(state.view==='issues'||state.view==='cycles'){const body=state.layout==='board'?issuesBoard():issuesList();return `<div style="display:grid;grid-template-columns:1fr ${withPeek&&state.peek?'400px':''};height:100%;min-height:0"><div style="display:flex;flex-direction:column;min-width:0;min-height:0">${state.view==='cycles'?`<div style="padding:12px 16px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:center"><div><div class="micro">Cycle 18 · 13–26 Oct · day 9 of 14</div><div style="font-size:15px;font-weight:600;margin-top:2px">24 of 36 pt done · scope +6 since start</div></div>${burn()}</div>`:''}${viewBar()}<div class="scroll lst" style="flex:1">${body}</div></div>${withPeek?peek():''}</div>`}return VIEWS[state.view][2]()}
+
+/* ---------- shells ---------- */
+function navList(){return `<div class="micro" style="padding:12px 8px 4px">Workspace</div>${['home','inbox','agent'].map(navBtn).join('')}<div class="micro" style="padding:14px 8px 4px">Teams · AIGIS + GOTEET</div>${['issues','cycles','roadmap','docs','auto'].map(navBtn).join('')}<div class="micro" style="padding:14px 8px 4px">Channels</div>${['aigis-dev','goteet','sim-ops','general'].map(c=>`<button class="nav-item" aria-current="${state.view==='chat'&&state.chan===c}" onclick="state.chan='${c}';go('chat')">${ic('hash')}${c}${c==='aigis-dev'?'<span class="n">3</span>':''}</button>`).join('')}`}
+function navBtn(v){const n={inbox:5,issues:12}[v];return `<button class="nav-item" aria-current="${state.view===v}" onclick="go('${v}')">${ic(VIEWS[v][1])}${VIEWS[v][0]}${n?`<span class="n">${n}</span>`:''}</button>`}
+const me=`<button class="nav-item" style="height:40px;border-top:1px solid var(--line);border-radius:0" onclick="toast('Profile · preferences · permissions')">${av('S')}<span style="display:flex;flex-direction:column;line-height:1.2"><b style="font-size:12px;color:var(--text)">Sanju</b><span class="faint" style="font-size:11px">DroneOS · owner</span></span>${ic('gear','margin-left:auto')}</button>`;
+function ledger(){return `<div style="display:grid;grid-template-columns:232px 1fr;height:100%"><nav style="background:var(--surface-1);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0"><div style="display:flex;align-items:center;gap:8px;padding:12px 12px 4px"><span style="width:22px;height:22px;border-radius:4px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:700 12px var(--font-mono)">G</span><b>DroneOS</b><span style="flex:1"></span><button class="btn sm" aria-label="Search" onclick="openPal()">${ic('search')}</button><button class="btn sm" aria-label="New issue">${ic('plus')}</button></div><div class="scroll" style="flex:1;padding:0 8px">${navList()}</div>${me}</nav><main style="display:flex;flex-direction:column;min-width:0;min-height:0"><div class="head"><span class="crumb">DroneOS</span><span class="crumb">/</span><h1>${VIEWS[state.view][0]}${state.view==='chat'?' · #'+state.chan:''}</h1><span style="flex:1"></span><button class="btn sm" onclick="openPal()">${ic('search')}Search <span class="kbd">⌘K</span></button></div><div style="flex:1;min-height:0">${mainView()}</div></main></div>`}
+function hub(){const rail=['home','inbox','chat','issues','roadmap','docs','agent'];const second=state.view==='chat'?`<div class="micro" style="padding:12px 12px 4px">Channels</div>${['aigis-dev','goteet','sim-ops','general'].map(c=>`<button class="nav-item" aria-current="${state.chan===c}" onclick="state.chan='${c}';render()">${ic('hash')}${c}</button>`).join('')}<div class="micro" style="padding:14px 12px 4px">Direct</div>${['A','M','R'].map(k=>`<button class="nav-item">${av(k)}${P[k][0]}</button>`).join('')}`:`<div class="micro" style="padding:12px 12px 4px">Views</div>${['issues','cycles','roadmap','auto'].map(navBtn).join('')}<div class="micro" style="padding:14px 12px 4px">Saved</div>${['My open work','Urgent + blocked','Needs review','Agent drafts'].map(s=>`<button class="nav-item">${ic('filter')}${s}</button>`).join('')}`;return `<div style="display:grid;grid-template-columns:64px 220px 1fr;height:100%"><nav class="rail">${rail.map(v=>`<button aria-current="${state.view===v||(v==='issues'&&state.view==='cycles')}" onclick="go('${v}')">${ic(VIEWS[v][1])}${VIEWS[v][0]}${v==='inbox'?'<span class="badge">5</span>':''}${v==='chat'?'<span class="badge">3</span>':''}</button>`).join('')}<span style="flex:1"></span><button onclick="toast('Profile · preferences · permissions')">${av('S')}</button></nav><nav style="background:var(--surface-1);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0"><div class="head"><h1 class="moment" style="font-size:19px;font-weight:450">${VIEWS[state.view][0]}</h1></div><div class="scroll" style="padding:0 6px;flex:1">${second}</div></nav><main style="min-width:0;min-height:0;display:flex;flex-direction:column"><div class="head" style="justify-content:center"><button class="btn" style="width:min(520px,100%);justify-content:flex-start;color:var(--text-faint)" onclick="openPal()">${ic('search')}Search issues, messages, docs, people<span class="kbd" style="margin-left:auto">⌘K</span></button></div><div style="flex:1;min-height:0">${mainView()}</div></main></div>`}
+function dock(){const tabs=['home','issues','roadmap','chat','docs'];const left=state.view==='chat'?'issues':state.view;const v0=state.view;state.view=left;const L=mainView(false);state.view=v0;return `<div style="display:grid;grid-template-rows:44px 1fr 24px;height:100%"><div class="topbar"><span class="moment" style="font-size:19px;margin-right:10px">Goteet</span>${tabs.map(v=>`<button class="wtab" aria-current="${state.view===v||(v==='issues'&&state.view==='cycles')}" onclick="go('${v}')">${ic(VIEWS[v][1])}${VIEWS[v][0]}</button>`).join('')}<span style="flex:1"></span><button class="btn sm" onclick="openPal()">${ic('search')}<span class="kbd">⌘K</span></button><button class="btn sm" style="position:relative">${ic('inbox')}5</button>${av('S')}</div><div style="display:grid;grid-template-columns:1fr 380px 340px;gap:8px;padding:8px;min-height:0;background:var(--bg)"><section class="panel ticks" style="display:flex;flex-direction:column;min-height:0;overflow:hidden"><div class="head" style="height:34px"><span class="micro">${VIEWS[left][0]}</span></div><div style="flex:1;min-height:0">${L}</div></section><section class="panel" style="display:flex;flex-direction:column;min-height:0;overflow:hidden">${peek()||'<div class="head micro">Select an issue</div>'}</section><section class="panel" style="display:flex;flex-direction:column;min-height:0;overflow:hidden"><div class="head" style="height:34px"><span class="micro">#${state.chan}</span><span style="flex:1"></span><span class="micro">Agent</span></div><div style="flex:1;min-height:0">${chat(true)}</div></section></div><div class="status"><span><span class="dot" style="background:var(--ok)"></span>Local · SQLite</span><span>GitHub · captured 22:40 IST</span><span>Google · snapshot 21 Oct</span><span style="color:var(--warn)">2 blocked</span><span style="flex:1"></span><span>Agent · review-first</span><span>v1.0 concept</span></div></div>`}
+const SHELLS={ledger,hub,dock};
+function render(){document.getElementById('app').innerHTML=SHELLS[state.shell]();}
+function go(v){state.view=v;if(v==='issues'||v==='cycles')state.peek=true;render()}
+function pick(k){state.sel=k;state.peek=true;render()}
+function drop(e,s){const k=e.dataTransfer.getData('k');const i=ISS.find(x=>x.k===k);if(i){i.s=s;render();toast(`${k} → ${ST[s][0]}`)}}
+let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',1800)}
+document.querySelectorAll('#shells button').forEach(b=>b.onclick=()=>{state.shell=b.dataset.s;document.querySelectorAll('#shells button').forEach(x=>x.setAttribute('aria-pressed',x===b));render()});
+document.getElementById('theme').onclick=e=>{const r=document.documentElement;const l=r.dataset.theme==='light';r.dataset.theme=l?'':'light';e.target.textContent=l?'Light':'Dark'};
+/* palette */
+const CMDS=[...Object.keys(VIEWS).map(v=>({l:'Go to '+VIEWS[v][0],i:VIEWS[v][1],r:()=>go(v),k:'G '+VIEWS[v][0][0]})),...ISS.map(i=>({l:i.k+'  '+i.t,i:'issue',r:()=>{go('issues');pick(i.k)}})),{l:'Create issue',i:'plus',r:()=>toast('New issue'),k:'C'},{l:'Ask agent: summarise my week',i:'agent',r:()=>go('agent'),k:'?'},{l:'Start meeting in #aigis-dev',i:'video',r:()=>toast('Meeting started')}];
+let pi=0,pr=[];
+function openPal(){document.getElementById('pal').classList.add('open');const q=document.getElementById('palq');q.value='';q.focus();palFilter()}
+function closePal(){document.getElementById('pal').classList.remove('open')}
+function palFilter(){const q=document.getElementById('palq').value.toLowerCase();pr=CMDS.filter(c=>c.l.toLowerCase().includes(q)).slice(0,10);pi=0;palDraw()}
+function palDraw(){document.getElementById('palres').innerHTML=pr.map((c,j)=>`<button class="opt" aria-selected="${j===pi}" onclick="pr[${j}].r();closePal()">${ic(c.i)}${c.l}${c.k?`<span class="kbd">${c.k}</span>`:''}</button>`).join('')||'<div class="faint" style="padding:12px 16px">No match — Enter asks the agent</div>'}
+document.getElementById('palq').addEventListener('input',palFilter);
+document.addEventListener('keydown',e=>{const pal=document.getElementById('pal').classList.contains('open');if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();pal?closePal():openPal();return}if(pal){if(e.key==='Escape')closePal();if(e.key==='ArrowDown'){pi=Math.min(pi+1,pr.length-1);palDraw();e.preventDefault()}if(e.key==='ArrowUp'){pi=Math.max(pi-1,0);palDraw();e.preventDefault()}if(e.key==='Enter'&&!e.isComposing){pr[pi]?.r();closePal()}return}if(/INPUT|TEXTAREA/.test(document.activeElement.tagName))return;if(state.view==='issues'||state.view==='cycles'){const idx=ISS.findIndex(i=>i.k===state.sel);if(e.key==='j'&&idx<ISS.length-1)pick(ISS[idx+1].k);if(e.key==='k'&&idx>0)pick(ISS[idx-1].k);if(e.key==='Escape'){state.peek=false;render()}}if(e.key==='c')toast('New issue');});
+render();
+</script>
+</body>
+</html>

@@ -13,4 +13,3 @@ export const getNumberOfDaysBetweenTwoDates = (startDate: Date, endDate: Date) =
 
   return daysDifference;
 };
-
