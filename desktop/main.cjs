@@ -140,7 +140,7 @@ function trusted(event) {
   return event.sender === windowRef?.webContents;
 }
 async function apiRequest(method, route, value) {
-  if (!/^\/api\/[a-zA-Z0-9_/-]+(?:\?[^#\s]*)?$/.test(route) || !['GET', 'POST'].includes(method))
+  if (!/^\/api\/[a-zA-Z0-9_/-]+(?:\?[^#\s]*)?$/.test(route) || !['GET', 'POST', 'DELETE'].includes(method))
     throw new Error('Unsupported API request');
   let response;
   try {
@@ -164,7 +164,12 @@ async function apiRequest(method, route, value) {
         '). Please retry or restart GOTEET.',
     );
   }
-  if (!response.ok) throw new Error(result.detail || 'The request failed');
+  if (!response.ok)
+    throw new Error(
+      Array.isArray(result.detail)
+        ? result.detail.map((d) => d.msg || String(d)).join('; ')
+        : result.detail || 'The request failed',
+    );
   return result;
 }
 ipcMain.handle('api', async (event, method, route, value) => {

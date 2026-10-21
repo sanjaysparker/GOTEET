@@ -15,7 +15,7 @@ import {
   Area,
 } from 'recharts';
 type Row = Record<string, any>;
-const colors = ['#b0b7c3', '#ffab65', '#ff9a9a', '#8cdbb1'];
+const colors = ['var(--text-dim)', 'var(--accent)', 'var(--critical)', 'var(--ok)'];
 const tip = {
   background: 'var(--surface)',
   border: '1px solid var(--border)',
@@ -46,7 +46,7 @@ export function WorkCharts({
   const counts = statuses.map((name, i) => ({
     name,
     value: rows.filter((t) => t.status === name).length,
-    color: name === 'Done' ? '#8cdbb1' : name === 'Paused' ? '#b3b1ee' : colors[i % colors.length],
+    color: name === 'Done' ? 'var(--ok)' : name === 'Paused' ? 'var(--info)' : colors[i % colors.length],
   }));
   const groups = Array.from(new Set(tasks.map((t) => t.project)))
     .slice(0, 7)
@@ -136,7 +136,7 @@ export function WorkCharts({
                 <Bar
                   dataKey="Done"
                   stackId="a"
-                  fill="#8cdbb1"
+                  fill="var(--ok)"
                   maxBarSize={18}
                   isAnimationActive={!reduce}
                   animationDuration={550}
@@ -144,7 +144,7 @@ export function WorkCharts({
                 <Bar
                   dataKey="Open"
                   stackId="a"
-                  fill="#ffab65"
+                  fill="var(--accent)"
                   maxBarSize={18}
                   isAnimationActive={!reduce}
                   animationDuration={550}
@@ -152,7 +152,7 @@ export function WorkCharts({
                 <Bar
                   dataKey="Blocked"
                   stackId="a"
-                  fill="#ff9a9a"
+                  fill="var(--critical)"
                   maxBarSize={18}
                   isAnimationActive={!reduce}
                   animationDuration={550}
@@ -227,8 +227,8 @@ export function DevelopmentChart({ repos, reduced = false }: { repos: Row[]; red
             <Area
               type="linear"
               dataKey="commits"
-              stroke="#ffab65"
-              fill="#ffab6520"
+              stroke="var(--accent)"
+              fill="var(--accent-dim)"
               strokeWidth={2}
               isAnimationActive={!reduce}
               animationDuration={650}

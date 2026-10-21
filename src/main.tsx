@@ -37,12 +37,41 @@ import {
   PanelRightClose,
   PanelRightOpen,
   LogIn,
+  Inbox as InboxIcon,
+  Bot,
+  RotateCcw,
+  BookOpen,
+  Zap,
+  Mail,
+  Cpu,
+  Command as CommandIcon,
+  MessageSquarePlus,
 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Switch from '@radix-ui/react-switch';
 import * as Tabs from '@radix-ui/react-tabs';
 import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+import '@fontsource-variable/bodoni-moda';
+import './theme/tokens.css';
 import './style.css';
+import './theme/premium.css';
+import {
+  api,
+  date,
+  displayZone,
+  setDisplayZone,
+  shortDate,
+  todayISO,
+  STATUSES,
+  PRIORITIES,
+  type Row,
+} from './lib/api';
+import { IssuesView } from './work/IssuesView';
+import { CyclesView, InboxView, DocsView, AutomationsView } from './work/PlanViews';
+import { AgentBrief, AnalystView, type AnalystActions } from './ai/AnalystView';
+import { CommandPalette, type Command } from './shell/CommandPalette';
+import { Avatar, Key, PriorityIcon, StatusIcon } from './work/bits';
 import { MediaViewer } from './MediaViewer';
 import { ModelsPanel } from './ModelsPanel';
 import { MediaLibrary } from './MediaLibrary';
@@ -53,7 +82,6 @@ import { WorkCharts, DevelopmentChart } from './WorkCharts';
 import { ProjectWorkspace } from './ProjectWorkspace';
 import { motion, useReducedMotion } from 'motion/react';
 
-type Row = Record<string, any>;
 declare global {
   interface Window {
     workmate: {
@@ -78,9 +106,60 @@ declare global {
     };
   }
 }
-const api = (route: string, value?: unknown) =>
-  window.workmate.request(value === undefined ? 'GET' : 'POST', route, value);
+// NAV IS GROUPED LIKE LINEAR/TEAMS; route ids stay the legacy names because the MCP/CLI navigate command uses them.
+const NAV: [string, [string, any, string?][]][] = [
+  [
+    'Workspace',
+    [
+      ['Today', Sun, 'Home'],
+      ['Inbox', InboxIcon],
+      ['Insights', Bot, 'AI analyst'],
+    ],
+  ],
+  [
+    'Work',
+    [
+      ['Tasks', ListTodo, 'Issues'],
+      ['Cycles', RotateCcw],
+      ['Projects', Folder],
+      ['Timeline', CalendarDays, 'Roadmap'],
+      ['Docs', BookOpen],
+      ['Concepts', Lightbulb],
+      ['Automations', Zap],
+    ],
+  ],
+  [
+    'Communicate',
+    [
+      ['Team chat', MessageSquare],
+      ['Mail', Mail],
+    ],
+  ],
+  [
+    'Library',
+    [
+      ['Media', Image],
+      ['Files', Folder],
+      ['Reports', FileText],
+    ],
+  ],
+  [
+    'System',
+    [
+      ['Models', Sparkles],
+      ['Agents', Users],
+      ['Connections', Link2],
+      ['System', Cpu],
+    ],
+  ],
+];
+const label = (r: string) => NAV.flatMap(([, i]) => i).find(([n]) => n === r)?.[2] || r;
 const routes = [
+  ['Inbox', InboxIcon],
+  ['Insights', Bot],
+  ['Cycles', RotateCcw],
+  ['Docs', BookOpen],
+  ['Automations', Zap],
   ['Today', Sun],
   ['Projects', Folder],
   ['Tasks', ListTodo],
@@ -96,16 +175,6 @@ const routes = [
   ['Agents', Users],
   ['System', Activity],
 ] as const;
-let displayZone = 'Asia/Kolkata';
-const date = (value?: string) =>
-  value
-    ? new Date(value).toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        timeZone: displayZone,
-      })
-    : 'Not set';
 const short = (value?: string) => value?.split('/').at(-1) || '';
 function External({ url, children }: { url: string; children: React.ReactNode }) {
   return (
@@ -244,6 +313,15 @@ function App() {
     [visible, setVisible] = useState(100),
     [editor, setEditor] = useState<{ type: string; data: Row } | null>(null),
     [pairToken, setPairToken] = useState('');
+  const [cycles, setCycles] = useState<Row[]>([]),
+    [inbox, setInbox] = useState<Row[]>([]),
+    [docs, setDocs] = useState<Row[]>([]),
+    [rules, setRules] = useState<Row[]>([]),
+    [insights, setInsights] = useState<Row | null>(null),
+    [analyses, setAnalyses] = useState<Row[]>([]),
+    [analysing, setAnalysing] = useState(false),
+    [palette, setPalette] = useState(false),
+    [focusTask, setFocusTask] = useState('');
   const recorder = useRef<MediaRecorder | null>(null),
     dialog = useRef<HTMLDialogElement>(null),
     stream = useRef<MediaStream | null>(null);
@@ -263,7 +341,51 @@ function App() {
   async function loadConnections() {
     const value = await api('/api/connections');
     setConnections(value);
-    if (!model && value.ollama?.models?.length) setModel(value.ollama.models[0]);
+    // FUNCTIONAL UPDATE: this runs from a 5 s interval created on first render, where `model` is still ''.
+    // Reading the closure reset the user's choice every 5 s (bug audit, main.tsx:59).
+    if (value.ollama?.models?.length) setModel((m) => m || value.ollama.models[0]);
+  }
+  // WORK + AGENT LAYERS LOAD INDEPENDENTLY: one failing route must not blank the others.
+  const quiet = <T,>(p: Promise<T>, set: (v: T) => void, fallback: T) =>
+    p.then(set).catch(() => set(fallback));
+  function loadWork() {
+    quiet(api('/api/cycles'), setCycles, []);
+    quiet(api('/api/docs'), setDocs, []);
+    quiet(api('/api/automations'), setRules, []);
+    loadAgent();
+  }
+  function loadAgent() {
+    quiet(api('/api/inbox'), setInbox, []);
+    quiet(api('/api/insights'), setInsights, null);
+    quiet(api('/api/insights/history'), setAnalyses, []);
+  }
+  async function runAnalysis(focus = '', silent = false) {
+    if (analysing) return;
+    setAnalysing(true);
+    if (!silent) setError('');
+    try {
+      const result = await api('/api/insights/run', { provider, model, focus });
+      setPlan(result.plan);
+      setAnswer(result.plan.plan.summary);
+      setMode('agent');
+      if (!silent) setInspector(true);
+      setInsights(result.insights);
+      setNotice(
+        silent
+          ? 'Agent finished its scheduled analysis · see Inbox'
+          : 'AI analysis ready · review the proposed changes',
+      );
+      loadAgent();
+    } catch (e) {
+      if (!silent) fail(e);
+    } finally {
+      setAnalysing(false);
+    }
+  }
+  function openTask(id: string) {
+    setFocusTask(id);
+    setRoute('Tasks');
+    setQuery('');
   }
   async function action(label: string, fn: () => Promise<unknown>) {
     setBusy(label);
@@ -287,15 +409,46 @@ function App() {
       .catch(fail);
     refresh().catch(fail);
     loadConnections().catch(fail);
+    loadWork();
     api('/api/research').then(setResearch).catch(fail);
     const timer = setInterval(() => {
       refresh().catch(fail);
       loadConnections().catch(fail);
     }, 5000);
+    const agentTimer = setInterval(loadAgent, 15000);
     return () => {
       clearInterval(timer);
+      clearInterval(agentTimer);
       stream.current?.getTracks().forEach((t) => t.stop());
     };
+  }, []);
+  // AGENTIC BY DEFAULT: once per 12 h the agent analyses the workspace on its own and files a report to Inbox.
+  // It only proposes; applying stays an explicit click. Off via Settings → Preferences → Automatic analysis.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current || !snap || snap.identity?.role === 'member') return;
+    if (
+      !preferences.display_name ||
+      preferences.auto_analysis === false ||
+      preferences.agent_enabled === false
+    )
+      return;
+    const last = analyses[0]?.created_at ? new Date(analyses[0].created_at).getTime() : 0;
+    if (Date.now() - last < 12 * 3600e3) return;
+    autoRan.current = true;
+    const t = setTimeout(() => runAnalysis('', true), 8000);
+    return () => clearTimeout(t);
+  }, [snap, preferences, analyses]);
+  // ⌘K / CTRL+K OPENS THE PALETTE FROM ANYWHERE, including inside inputs.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPalette((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
   useEffect(() => {
     if (route === 'Connections' || route === 'Settings') loadConnections().catch(fail);
@@ -423,6 +576,7 @@ function App() {
       if (editor.type === 'member') setPairToken(value.token);
       setEditor(null);
       await refresh();
+      loadAgent();
       if (route === 'Team chat') api('/api/team').then(setTeam);
       setNotice('Saved to your workspace');
     } catch (e) {
@@ -557,8 +711,16 @@ function App() {
     return () => clearInterval(timer);
   }, [plan?.id, plan?.status]);
   useEffect(() => {
-    document.documentElement.style.setProperty('--accent', preferences.accent || '#ffab65');
-    document.documentElement.dataset.theme = preferences.theme || 'graphite';
+    // AIGIS NOIR IS THE DEFAULT; legacy GOTEET theme names map onto the nearest AIGIS palette.
+    const theme =
+      ({ graphite: '', midnight: 'abyssal', light: 'paper', noir: '' } as Row)[preferences.theme] ??
+      preferences.theme ??
+      '';
+    if (theme) document.documentElement.dataset.theme = theme;
+    else delete document.documentElement.dataset.theme;
+    const accent = preferences.accent && preferences.accent !== '#ffab65' ? preferences.accent : '';
+    if (accent) document.documentElement.style.setProperty('--accent', accent);
+    else document.documentElement.style.removeProperty('--accent');
     document.documentElement.classList.toggle('reduce-motion', !!preferences.reduce_motion);
   }, [preferences.accent, preferences.reduce_motion, preferences.theme]);
   function browse(path: string) {
@@ -594,12 +756,12 @@ function App() {
   const matches = (item: unknown) => JSON.stringify(item).toLowerCase().includes(query.toLowerCase());
   const filteredFiles = files.filter((f) => matches(f) && (mediaType === 'All' || f.category === mediaType));
   const owner = snap?.identity?.role !== 'member';
-  displayZone = preferences.timezone || 'Asia/Kolkata';
+  setDisplayZone(preferences.timezone || 'Asia/Kolkata');
   const isAI = answer;
   const heading: Record<string, string> = {
     Today: 'Your day, in focus.',
     Projects: 'A home for every project.',
-    Tasks: 'Turn decisions into progress.',
+    Tasks: 'Every issue, one keystroke away.',
     Timeline: 'Give the work a timeline.',
     'Team chat': 'Keep the conversation close.',
     Concepts: 'Make room for the next idea.',
@@ -612,11 +774,16 @@ function App() {
     Agents: 'Your agents, connected.',
     Models: 'Choose your intelligence.',
     Settings: 'Your account. Your controls.',
+    Inbox: 'What needs you.',
+    Insights: 'Your work, analysed.',
+    Cycles: 'Work in rhythm.',
+    Docs: 'Decisions, written down.',
+    Automations: 'Routine, handled.',
   };
   const subheading: Record<string, string> = {
     Today: 'A brief built from your work, with evidence behind every next step.',
     Projects: 'Repository activity and project plans together. Statuses are yours to set.',
-    Tasks: 'Owners, priorities and dates that everyone can see.',
+    Tasks: 'List or board · J/K to move · Enter for details · C to create · ⌘K for everything.',
     Timeline: 'Set real start and target dates. No inferred deadlines.',
     'Team chat': 'Shared channels, authenticated authors and persistent conversations.',
     Concepts: 'A live space for ideas. Claude and Codex can read and update these through MCP.',
@@ -628,7 +795,158 @@ function App() {
     Agents: 'Installed runtimes, MCP registrations and skills in one place.',
     Models: 'Connect an account, configure an API, or run a model on your computer.',
     Settings: 'Profile, sign-in, preferences and permissions for this workspace.',
+    Inbox: 'Assignments, blockers, mentions and agent reports, newest first.',
+    Insights:
+      'The agent reads tasks, projects, CI and captured mail, then reports risks and proposes changes for you to apply.',
+    Cycles: 'Time-boxed cycles with scope and burn-up measured from saved tasks.',
+    Docs: 'Markdown pages linked to projects and tasks.',
+    Automations: 'Local rules that run after each change, with every run audited.',
   };
+  const providerLabel =
+    provider === 'ollama'
+      ? 'Ollama · ' + (model || 'no model')
+      : provider === 'codex'
+        ? 'Codex · ChatGPT login'
+        : provider === 'claude'
+          ? 'Claude CLI'
+          : provider + ' API';
+  const analyst: AnalystActions = {
+    run: (focus) => runAnalysis(focus || ''),
+    running: analysing,
+    openTask,
+    openProject: (id) => {
+      const p = projects.find((x) => x.id === id);
+      if (p) setProjectFocus(p);
+      setRoute('Projects');
+    },
+    external: (url) => void window.workmate.external(url),
+    track: (f) => {
+      const src = (snap?.workspace?.followups || []).find((x: Row) => x.id === f.evidence?.[0]?.id) || {};
+      openEditor('task', {
+        title: src.title || f.title.replace(/^Untracked: /, ''),
+        project: src.project || 'General',
+        priority: src.priority || 'Normal',
+        source_url: src.url || '',
+      });
+    },
+    showPlan: () => setInspector(true),
+    providerLabel,
+  };
+  const go = (r: string) => () => {
+    setRoute(r);
+    setQuery('');
+  };
+  const commands: Command[] = [
+    ...NAV.flatMap(([group, items]) =>
+      items.map(([name, Icon, text]) => ({
+        id: 'nav-' + name,
+        group: 'Go to',
+        label: text || name,
+        icon: <Icon size={15} />,
+        run: go(name),
+      })),
+    ),
+    {
+      id: 'new-task',
+      group: 'Create',
+      label: 'New task',
+      hint: 'C',
+      icon: <Plus size={15} />,
+      run: () => openEditor('task'),
+    },
+    {
+      id: 'new-project',
+      group: 'Create',
+      label: 'New project',
+      icon: <Folder size={15} />,
+      run: () => openEditor('project'),
+    },
+    {
+      id: 'new-concept',
+      group: 'Create',
+      label: 'New concept',
+      icon: <Lightbulb size={15} />,
+      run: () => openEditor('concept'),
+    },
+    {
+      id: 'ai-run',
+      group: 'Agent',
+      label: 'Run AI analysis of my workspace',
+      icon: <Bot size={15} />,
+      run: () => runAnalysis(),
+    },
+    {
+      id: 'ai-today',
+      group: 'Agent',
+      label: 'Ask: what should I focus on today?',
+      icon: <Sparkles size={15} />,
+      run: () => (setInspector(true), setQuestion('What should I focus on today?')),
+    },
+    {
+      id: 'ai-block',
+      group: 'Agent',
+      label: 'Ask: what is blocking my team?',
+      icon: <Sparkles size={15} />,
+      run: () => (setInspector(true), setQuestion('What is blocking my team?')),
+    },
+    {
+      id: 'rep-daily',
+      group: 'Reports',
+      label: 'Build daily brief',
+      icon: <FileText size={15} />,
+      run: () => makeReport('daily'),
+    },
+    {
+      id: 'rep-weekly',
+      group: 'Reports',
+      label: 'Build weekly review',
+      icon: <CalendarDays size={15} />,
+      run: () => makeReport('weekly'),
+    },
+    {
+      id: 'sync',
+      group: 'Actions',
+      label: 'Sync GitHub and local sources',
+      icon: <RefreshCw size={15} />,
+      run: () => action('Syncing GitHub and local files', () => api('/api/sync', {})),
+    },
+    {
+      id: 'toggle-ai',
+      group: 'Actions',
+      label: inspector ? 'Hide assistant panel' : 'Show assistant panel',
+      icon: <PanelRightOpen size={15} />,
+      run: () => setInspector(!inspector),
+    },
+    {
+      id: 'settings',
+      group: 'Actions',
+      label: 'Profile & settings',
+      icon: <Settings2 size={15} />,
+      run: () => profile('account'),
+    },
+    ...(snap?.tasks || []).map((t: Row) => ({
+      id: 'task-' + t.id,
+      group: 'Task',
+      label: `${t.key || ''} ${t.title}`.trim(),
+      hint: t.status,
+      icon: <ListTodo size={15} />,
+      run: () => openTask(t.id),
+    })),
+    ...(snap?.projects || []).map((p: Row) => ({
+      id: 'proj-' + p.id,
+      group: 'Project',
+      label: p.name,
+      icon: <Folder size={15} />,
+      run: () => analyst.openProject(p.id),
+    })),
+    ...docs.map((d) => ({
+      id: 'doc-' + d.id,
+      group: 'Doc',
+      label: d.title,
+      icon: <BookOpen size={15} />,
+      run: go('Docs'),
+    })),
+  ];
   if (!snap)
     return (
       <div className="boot">
@@ -647,23 +965,46 @@ function App() {
             GOTEET<small>Sanju’s workspace</small>
           </div>
         </div>
-        <nav aria-label="Workspace">
-          {routes.map(([name, Icon]) => (
-            <button
-              key={name}
-              className={route === name ? 'nav active' : 'nav'}
-              onClick={() => {
-                setRoute(name);
-                setQuery('');
-                setVisible(100);
-              }}
-            >
-              <Icon size={18} />
-              {name}
-              {name === 'Tasks' && tasks.filter((t) => t.status !== 'Done').length > 0 && (
-                <span>{tasks.filter((t) => t.status !== 'Done').length}</span>
-              )}
-            </button>
+        <button className="nav-search" onClick={() => setPalette(true)}>
+          <Search size={14} />
+          Search or command
+          <kbd>⌘K</kbd>
+        </button>
+        <nav aria-label="Workspace" className="nav-groups">
+          {NAV.map(([group, items]) => (
+            <div key={group} className="nav-group">
+              <div className="nav-group-label">{group}</div>
+              {items.map(([name, Icon, text]) => {
+                const count =
+                  name === 'Tasks'
+                    ? tasks.filter((t) => t.status !== 'Done').length
+                    : name === 'Inbox'
+                      ? inbox.filter((i) => !i.read).length
+                      : name === 'Insights'
+                        ? insights?.counts?.critical || 0
+                        : 0;
+                return (
+                  <button
+                    key={name}
+                    className={route === name ? 'nav active' : 'nav'}
+                    aria-current={route === name ? 'page' : undefined}
+                    onClick={() => {
+                      setRoute(name);
+                      setQuery('');
+                      setVisible(100);
+                    }}
+                  >
+                    <Icon size={15} />
+                    {text || name}
+                    {count > 0 && (
+                      <span className={name === 'Insights' ? 'alert' : name === 'Inbox' ? 'unread' : ''}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           ))}
         </nav>
         <div className="sidebar-bottom">
@@ -746,7 +1087,7 @@ function App() {
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
                 <button aria-label="Switch workspace view">
-                  {route}
+                  {label(route)}
                   <ChevronRight size={12} />
                 </button>
               </DropdownMenu.Trigger>
@@ -761,7 +1102,7 @@ function App() {
                         setVisible(100);
                       }}
                     >
-                      {name}
+                      {label(name)}
                     </DropdownMenu.Item>
                   ))}
                   <DropdownMenu.Separator />
@@ -772,12 +1113,21 @@ function App() {
               </DropdownMenu.Portal>
             </DropdownMenu.Root>
           </div>
-          {!['Models', 'System', 'Settings', 'Connections'].includes(route) && (
+          {![
+            'Models',
+            'System',
+            'Settings',
+            'Connections',
+            'Insights',
+            'Inbox',
+            'Automations',
+            'Cycles',
+          ].includes(route) && (
             <label className="search">
               <Search size={15} />
               <input
                 aria-label={'Search ' + route}
-                placeholder={'Search ' + route.toLowerCase() + '…'}
+                placeholder={'Filter ' + label(route).toLowerCase() + '…'}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -786,6 +1136,15 @@ function App() {
               />
             </label>
           )}
+          <button
+            className="toolbar-ai"
+            disabled={analysing || !owner}
+            onClick={() => runAnalysis()}
+            title="Agent analyses the workspace and proposes changes"
+          >
+            {analysing ? <Loader2 size={15} className="spin" /> : <Bot size={15} />}
+            {analysing ? 'Analysing…' : 'Analyse'}
+          </button>
           <button
             disabled={!!busy || !owner}
             onClick={() => action('Syncing GitHub and local files', () => api('/api/sync', {}))}
@@ -832,12 +1191,6 @@ function App() {
               <h1>{heading[route]}</h1>
               <p>{subheading[route]}</p>
             </div>
-            {route === 'Tasks' && (
-              <button className="primary" onClick={() => openEditor('task')}>
-                <Plus size={16} />
-                New task
-              </button>
-            )}
             {route === 'Projects' && (
               <button className="primary" onClick={() => openEditor('project')}>
                 <Plus size={16} />
@@ -853,6 +1206,77 @@ function App() {
           </div>
           {route === 'Today' && (
             <>
+              <AgentBrief insights={insights} latest={analyses[0] || null} a={analyst} />
+              <div className="stat-tiles">
+                {[
+                  [
+                    'Open tasks',
+                    tasks.filter((t) => t.status !== 'Done').length,
+                    'open',
+                    'var(--accent)',
+                    go('Tasks'),
+                  ],
+                  [
+                    'Blocked',
+                    tasks.filter((t) => t.status === 'Blocked').length,
+                    'tasks',
+                    'var(--critical)',
+                    go('Tasks'),
+                  ],
+                  ['Unread', inbox.filter((i) => !i.read).length, 'inbox', 'var(--info)', go('Inbox')],
+                  [
+                    'Active cycle',
+                    (() => {
+                      const c = cycles.find((x) => x.status === 'active');
+                      return c?.stats?.issues ? Math.round((c.stats.done / c.stats.issues) * 100) : 0;
+                    })(),
+                    '% done',
+                    'var(--ok)',
+                    go('Cycles'),
+                  ],
+                ].map(([name, value, unit, tone, run]) => (
+                  <button key={String(name)} className="stat-tile" onClick={run as () => void}>
+                    <span className="micro-label">{String(name)}</span>
+                    <strong className="num">
+                      {String(value)}
+                      <small>{String(unit)}</small>
+                    </strong>
+                    <i style={{ background: String(tone) }} />
+                  </button>
+                ))}
+              </div>
+              {tasks.filter(
+                (t) =>
+                  t.status !== 'Done' &&
+                  (t.due ? t.due <= todayISO() : t.priority === 'Urgent' || t.status === 'Blocked'),
+              ).length > 0 && (
+                <section>
+                  <div className="section-title">
+                    <h2>Due or urgent</h2>
+                    <button className="text-link" onClick={go('Tasks')}>
+                      All tasks
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                  {tasks
+                    .filter(
+                      (t) =>
+                        t.status !== 'Done' &&
+                        (t.due ? t.due <= todayISO() : t.priority === 'Urgent' || t.status === 'Blocked'),
+                    )
+                    .slice(0, 8)
+                    .map((t) => (
+                      <button key={t.id} className="wk-row compact" onClick={() => openTask(t.id)}>
+                        <PriorityIcon priority={t.priority} />
+                        <Key task={t} />
+                        <StatusIcon status={t.status} />
+                        <span className="wk-title">{t.title}</span>
+                        <span className="num faint">{t.due ? shortDate(t.due) : ''}</span>
+                        <Avatar name={t.owner} />
+                      </button>
+                    ))}
+                </section>
+              )}
               <DevelopmentChart reduced={reduceMotion} repos={repos} />
               <div className="daily-line">
                 <span>
@@ -1187,91 +1611,93 @@ function App() {
           )}
           {route === 'Tasks' && (
             <>
-              <WorkCharts
-                reduced={reduceMotion}
+              <IssuesView
                 tasks={tasks}
                 projects={projects}
-                kind="tasks"
-                onStatus={setTaskStatus}
+                cycles={cycles}
+                insights={insights}
+                query={query}
+                owner={owner}
+                focus={focusTask}
+                initialStatus={taskStatus}
+                refresh={async () => {
+                  await refresh();
+                  loadAgent();
+                }}
+                openDetails={(t) => openEditor('task', t)}
+                create={(seed = {}) =>
+                  openEditor('task', { project: 'General', status: 'Todo', priority: 'Normal', ...seed })
+                }
+                fail={fail}
+                notify={setNotice}
               />
-              {taskStatus !== 'All' && (
-                <div className="chart-filter">
-                  {taskStatus} tasks<button onClick={() => setTaskStatus('All')}>Clear filter</button>
-                </div>
-              )}
-              <div className="status-summary">
-                {['Todo', 'In progress', 'Blocked', 'Done'].map((s) => (
-                  <span key={s}>
-                    <span
-                      className={'status-dot ' + (s === 'Done' ? 'ok' : s === 'Blocked' ? 'danger' : '')}
-                    />
-                    {s}
-                    <strong>{tasks.filter((t) => t.status === s).length}</strong>
-                  </span>
-                ))}
-              </div>
-              {tasks.filter((t) => matches(t) && (taskStatus === 'All' || t.status === taskStatus)).length ? (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Task</th>
-                        <th>Owner</th>
-                        <th>Status</th>
-                        <th>Due</th>
-                        <th />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tasks
-                        .filter((t) => matches(t) && (taskStatus === 'All' || t.status === taskStatus))
-                        .map((t) => (
-                          <tr key={t.id}>
-                            <td>
-                              <button className="work-item-title" onClick={() => openEditor('task', t)}>
-                                {t.title}
-                              </button>
-                              <small>
-                                {t.project} · {t.priority}
-                              </small>
-                            </td>
-                            <td>{t.owner}</td>
-                            <td>
-                              <select
-                                aria-label={'Status for ' + t.title}
-                                value={t.status}
-                                onChange={(e) =>
-                                  action('Updating task', () =>
-                                    api('/api/tasks', { ...t, status: e.target.value }),
-                                  )
-                                }
-                              >
-                                {['Todo', 'In progress', 'Blocked', 'Done'].map((v) => (
-                                  <option key={v}>{v}</option>
-                                ))}
-                              </select>
-                            </td>
-                            <td>{date(t.due)}</td>
-                            <td>
-                              <button onClick={() => openEditor('task', t)}>Edit</button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <Empty
-                  title="Nothing lost between idea and action."
-                  detail="Create a task, or track a suggested follow-up from your daily brief."
-                  action={
-                    <button className="primary" onClick={() => openEditor('task')}>
-                      Create first task
-                    </button>
-                  }
+              <details className="wk-charts">
+                <summary>Charts · status and distribution</summary>
+                <WorkCharts
+                  reduced={reduceMotion}
+                  tasks={tasks}
+                  projects={projects}
+                  kind="tasks"
+                  onStatus={setTaskStatus}
                 />
-              )}
+              </details>
             </>
+          )}
+          {route === 'Insights' && <AnalystView insights={insights} history={analyses} a={analyst} />}
+          {route === 'Inbox' && (
+            <InboxView
+              items={inbox}
+              reload={loadAgent}
+              fail={fail}
+              open={(i) => {
+                if (i.ref_type === 'task') openTask(i.ref_id);
+                else if (i.ref_type === 'project') analyst.openProject(i.ref_id);
+                else if (i.ref_type === 'plan' || i.kind === 'agent') {
+                  setRoute('Insights');
+                  setInspector(true);
+                } else if (i.ref_type === 'channel') {
+                  setChannel(i.ref_id);
+                  setRoute('Team chat');
+                }
+              }}
+            />
+          )}
+          {route === 'Cycles' && (
+            <CyclesView
+              cycles={cycles}
+              tasks={tasks}
+              owner={owner}
+              reload={() => quiet(api('/api/cycles'), setCycles, [])}
+              refresh={async () => {
+                await refresh();
+                quiet(api('/api/cycles'), setCycles, []);
+              }}
+              openTask={openTask}
+              fail={fail}
+              notify={setNotice}
+            />
+          )}
+          {route === 'Docs' && (
+            <DocsView
+              docs={docs}
+              tasks={tasks}
+              projects={projects}
+              owner={owner}
+              query={query}
+              reload={() => quiet(api('/api/docs'), setDocs, [])}
+              openTask={openTask}
+              fail={fail}
+              notify={setNotice}
+            />
+          )}
+          {route === 'Automations' && (
+            <AutomationsView
+              rules={rules}
+              owner={owner}
+              reload={() => quiet(api('/api/automations'), setRules, [])}
+              fail={fail}
+              notify={setNotice}
+            />
           )}
           {route === 'System' && (
             <>
@@ -1426,12 +1852,30 @@ function App() {
                   <label className="setting-field">
                     Appearance
                     <select
-                      value={preferences.theme || 'graphite'}
+                      value={
+                        ({ graphite: 'noir', midnight: 'abyssal', light: 'paper' } as Row)[
+                          preferences.theme
+                        ] ||
+                        preferences.theme ||
+                        'noir'
+                      }
                       onChange={(e) => setPreferences({ ...preferences, theme: e.target.value })}
                     >
-                      <option value="graphite">Graphite</option>
-                      <option value="midnight">Midnight</option>
-                      <option value="light">Paper</option>
+                      {[
+                        ['noir', 'Noir Atelier (AIGIS)'],
+                        ['glacier', 'Glacier'],
+                        ['abyssal', 'Abyssal'],
+                        ['cirrus', 'Cirrus'],
+                        ['ember', 'Ember · night'],
+                        ['phosphor', 'Phosphor'],
+                        ['crimson', 'Crimson'],
+                        ['orchid', 'Orchid'],
+                        ['paper', 'Paper · light'],
+                      ].map(([v, l]) => (
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className="setting-field">
@@ -1439,17 +1883,18 @@ function App() {
                     <input
                       type="color"
                       aria-label="Custom accent"
-                      value={preferences.accent || '#ffab65'}
+                      value={preferences.accent || '#e3cf96'}
                       onChange={(e) => setPreferences({ ...preferences, accent: e.target.value })}
                     />
                   </label>
                   <label className="setting-field">
                     Accent colour
                     <select
-                      value={preferences.accent || '#ffab65'}
+                      value={preferences.accent === '#ffab65' ? '' : preferences.accent || ''}
                       onChange={(e) => setPreferences({ ...preferences, accent: e.target.value })}
                     >
                       {[
+                        ['', 'Theme accent'],
                         ['#ffab65', 'Apricot'],
                         ['#8cdbb1', 'Mint'],
                         ['#8fb9ff', 'Blue'],
@@ -1483,6 +1928,24 @@ function App() {
                       aria-label="Reduce app motion"
                       checked={!!preferences.reduce_motion}
                       onCheckedChange={(reduce_motion) => setPreferences({ ...preferences, reduce_motion })}
+                    >
+                      <Switch.Thumb />
+                    </Switch.Root>
+                  </div>
+                  <div className="permission-row">
+                    <div>
+                      <strong>Automatic AI analysis</strong>
+                      <small>
+                        Every 12 h the agent reads tasks, projects, CI and captured sources, files a report to
+                        Inbox and proposes changes. Nothing applies without your click. Uses the assistant’s
+                        selected model.
+                      </small>
+                    </div>
+                    <Switch.Root
+                      className="permission-switch"
+                      aria-label="Automatic AI analysis"
+                      checked={preferences.auto_analysis !== false}
+                      onCheckedChange={(auto_analysis) => setPreferences({ ...preferences, auto_analysis })}
                     >
                       <Switch.Thumb />
                     </Switch.Root>
@@ -1712,83 +2175,134 @@ function App() {
             </>
           )}
           {route === 'Team chat' && (
-            <>
-              <div className="chat-head">
-                <select
-                  aria-label="Chat channel"
-                  value={channel}
-                  onChange={(e) => setChannel(e.target.value)}
-                >
-                  {['general', 'development', 'operations', ...projects.map((p) => 'project-' + p.id)].map(
-                    (c) => (
-                      <option key={c} value={c}>
-                        # {c}
-                      </option>
-                    ),
-                  )}
-                </select>
-                <span>{team.length} workspace members</span>
-                {owner && (
-                  <button onClick={() => openEditor('member')}>
-                    <Users size={14} />
-                    Add member
+            <div className="chat-shell">
+              <nav className="chat-channels" aria-label="Channels">
+                <div className="nav-group-label">Channels</div>
+                {['general', 'development', 'operations'].map((c) => (
+                  <button
+                    key={c}
+                    className={channel === c ? 'nav active' : 'nav'}
+                    onClick={() => setChannel(c)}
+                  >
+                    # {c}
                   </button>
-                )}
-              </div>
-              <div className="inline-note">
-                Messages stay on this workspace’s server. Other devices need a paired client and a reachable
-                HTTPS server. This app currently hosts locally.
-              </div>
-              {pairToken && (
-                <div className="pair-token">
-                  <strong>Member pairing token — copy once</strong>
-                  <textarea readOnly value={pairToken} />
-                  <button onClick={() => setPairToken('')}>Hide token</button>
+                ))}
+                {projects.length > 0 && <div className="nav-group-label">Projects</div>}
+                {projects.map((p) => (
+                  <button
+                    key={p.id}
+                    className={channel === 'project-' + p.id ? 'nav active' : 'nav'}
+                    onClick={() => setChannel('project-' + p.id)}
+                  >
+                    # {p.name.toLowerCase().replace(/\s+/g, '-')}
+                  </button>
+                ))}
+                <div className="nav-group-label">People</div>
+                {team.map((m) => (
+                  <div key={m.id || m.name} className="chat-person">
+                    <Avatar name={m.name} size={18} />
+                    {m.name}
+                  </div>
+                ))}
+              </nav>
+              <div className="chat-main">
+                <div className="chat-head">
+                  <strong className="chat-title">
+                    #{' '}
+                    {channel.startsWith('project-')
+                      ? projects.find((p) => 'project-' + p.id === channel)?.name || channel
+                      : channel}
+                  </strong>
+                  <span>{team.length} workspace members</span>
+                  {owner && (
+                    <button onClick={() => openEditor('member')}>
+                      <Users size={14} />
+                      Add member
+                    </button>
+                  )}
                 </div>
-              )}
-              <Attachments type="channel" id={channel} fail={fail} />
-              <div className="chat-messages">
-                {messages.length ? (
-                  messages.filter(matches).map((m) => (
-                    <article key={m.id}>
-                      <div className="avatar">{m.author_name[0]}</div>
-                      <div>
-                        <div className="message-heading">
-                          <strong>{m.author_name}</strong>
-                          <time>
-                            {new Date(m.created_at).toLocaleString('en-IN', { timeZone: displayZone })}
-                          </time>
-                        </div>
-                        <RichText text={m.body} />
-                      </div>
-                    </article>
-                  ))
-                ) : (
-                  <Empty
-                    title={'Start the conversation in #' + channel}
-                    detail="Messages are authored by the authenticated workspace member."
-                  />
+                <div className="inline-note">
+                  Messages stay on this workspace’s server. Other devices need a paired client and a reachable
+                  HTTPS server. This app currently hosts locally.
+                </div>
+                {pairToken && (
+                  <div className="pair-token">
+                    <strong>Member pairing token — copy once</strong>
+                    <textarea readOnly value={pairToken} />
+                    <button onClick={() => setPairToken('')}>Hide token</button>
+                  </div>
                 )}
+                <Attachments type="channel" id={channel} fail={fail} />
+                <div className="chat-messages">
+                  {messages.length ? (
+                    messages.filter(matches).map((m) => (
+                      <article key={m.id}>
+                        <div className="avatar">{m.author_name[0]}</div>
+                        <div>
+                          <div className="message-heading">
+                            <strong>{m.author_name}</strong>
+                            <time>
+                              {new Date(m.created_at).toLocaleString('en-IN', { timeZone: displayZone })}
+                            </time>
+                          </div>
+                          <RichText text={m.body} />
+                        </div>
+                        {owner && (
+                          <button
+                            className="msg-action"
+                            title="Create a task from this message"
+                            aria-label="Create task from message"
+                            onClick={() =>
+                              openEditor('task', {
+                                title: m.body.split('\n')[0].slice(0, 200),
+                                description: `From #${channel} · ${m.author_name} · ${new Date(m.created_at).toLocaleString('en-IN', { timeZone: displayZone })}\n\n${m.body}`,
+                                project: channel.startsWith('project-')
+                                  ? projects.find((p) => 'project-' + p.id === channel)?.name || 'General'
+                                  : 'General',
+                              })
+                            }
+                          >
+                            <MessageSquarePlus size={14} />
+                            Task
+                          </button>
+                        )}
+                      </article>
+                    ))
+                  ) : (
+                    <Empty
+                      title={'Start the conversation in #' + channel}
+                      detail="Messages are authored by the authenticated workspace member."
+                    />
+                  )}
+                </div>
+                <form
+                  className="chat-composer"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    sendMessage();
+                  }}
+                >
+                  <textarea
+                    aria-label="Message your team"
+                    placeholder={
+                      'Message #' + channel + ' · Enter sends · Shift+Enter newline · @name mentions'
+                    }
+                    value={chatText}
+                    onChange={(e) => setChatText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                  />
+                  <button className="primary" disabled={!chatText.trim()}>
+                    <Send size={15} />
+                    Send
+                  </button>
+                </form>
               </div>
-              <form
-                className="chat-composer"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  sendMessage();
-                }}
-              >
-                <textarea
-                  aria-label="Message your team"
-                  placeholder={'Message #' + channel + '…'}
-                  value={chatText}
-                  onChange={(e) => setChatText(e.target.value)}
-                />
-                <button className="primary" disabled={!chatText.trim()}>
-                  <Send size={15} />
-                  Send message
-                </button>
-              </form>
-            </>
+            </div>
           )}
           {route === 'Media' && (
             <MediaLibrary
@@ -2035,14 +2549,25 @@ function App() {
             </>
           )}
         </motion.main>
-        <footer>
+        <footer className="statusbar">
           <span>
             <span className="status-dot ok" />
-            Local workspace
+            Local · SQLite
           </span>
           <span>GitHub · {date(snap.inventory.captured_at)}</span>
           <span>Google · {snap.workspace.gmail?.mode || 'imported snapshot'}</span>
-          <span className="footer-right">Live updates every 5s</span>
+          {insights && (
+            <button className="status-link" onClick={go('Insights')}>
+              Health <strong className="num">{insights.score}</strong>
+              {insights.counts.critical > 0 && <em className="crit">{insights.counts.critical} critical</em>}
+            </button>
+          )}
+          <span className="footer-right">
+            Agent · {mode === 'agent' ? 'review-first' : 'read-only'} · {providerLabel}
+          </span>
+          <button className="status-link" onClick={() => setPalette(true)}>
+            <CommandIcon size={11} />K
+          </button>
         </footer>
       </div>
       {inspector && (
@@ -2052,10 +2577,23 @@ function App() {
             <h2>GOTEET assistant</h2>
             <Badge>{mode === 'agent' ? 'Agent' : 'Ask'}</Badge>
           </div>
-          <p className="assistant-intro">
-            Less context switching.
-            <br />A clearer next step.
-          </p>
+          <div className="agent-watch">
+            <span
+              className={
+                'watch-dot ' +
+                (insights?.counts?.critical ? 'critical' : insights?.counts?.warn ? 'warn' : 'ok')
+              }
+            />
+            <span className="grow">
+              {insights
+                ? `Watching ${insights.totals.open} open tasks · ${insights.counts.critical} critical · ${insights.counts.warn} to watch`
+                : 'Reading your workspace…'}
+            </span>
+            <button className="sm" disabled={analysing || !owner} onClick={() => runAnalysis()}>
+              {analysing ? <Loader2 size={13} className="spin" /> : <Bot size={13} />}
+              {analysing ? 'Analysing' : 'Analyse'}
+            </button>
+          </div>
           <div className="assistant-model">
             <select
               aria-label="Assistant mode"
@@ -2168,19 +2706,24 @@ function App() {
                   <div className="assistant-sigil">
                     <Sparkles size={26} />
                   </div>
-                  <h3>Start with what matters.</h3>
-                  <p>Ask about your projects, open tasks or the follow-ups waiting for you.</p>
+                  <h3 className="moment">Start with what matters.</h3>
+                  <p>The agent has already read your workspace. Pick a finding or ask anything.</p>
                 </div>
                 {[
+                  ...(insights?.findings || [])
+                    .slice(0, 3)
+                    .map((f: Row) => `${f.title}: what should I do? Propose the changes.`),
                   'What should I focus on today?',
                   'Summarise my development progress',
                   'What is blocking my team?',
-                ].map((q) => (
-                  <button className="prompt" key={q} onClick={() => setQuestion(q)}>
-                    {q}
-                    <ArrowUpRight size={14} />
-                  </button>
-                ))}
+                ]
+                  .slice(0, 5)
+                  .map((q) => (
+                    <button className="prompt" key={q} onClick={() => setQuestion(q)}>
+                      {q}
+                      <ArrowUpRight size={14} />
+                    </button>
+                  ))}
               </>
             )}
           </div>
@@ -2225,6 +2768,15 @@ function App() {
           </div>
         </aside>
       )}
+      <CommandPalette
+        open={palette}
+        close={() => setPalette(false)}
+        commands={commands}
+        ask={(q) => {
+          setInspector(true);
+          setQuestion(q);
+        }}
+      />
       {previewFile && (
         <MediaViewer
           initial={previewFile}
@@ -2332,7 +2884,7 @@ function App() {
                         value={editor.data.status || 'Todo'}
                         onChange={(e) => field('status', e.target.value)}
                       >
-                        {['Todo', 'In progress', 'Blocked', 'Done'].map((v) => (
+                        {STATUSES.map((v) => (
                           <option key={v}>{v}</option>
                         ))}
                       </select>
@@ -2343,8 +2895,39 @@ function App() {
                         value={editor.data.priority || 'Normal'}
                         onChange={(e) => field('priority', e.target.value)}
                       >
-                        {['High', 'Normal', 'Low'].map((v) => (
+                        {PRIORITIES.map((v) => (
                           <option key={v}>{v}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Estimate
+                      <select
+                        value={String(editor.data.estimate || 0)}
+                        onChange={(e) =>
+                          setEditor((x) =>
+                            x ? { ...x, data: { ...x.data, estimate: Number(e.target.value) } } : null,
+                          )
+                        }
+                      >
+                        {[0, 1, 2, 3, 5, 8, 13].map((n) => (
+                          <option key={n} value={n}>
+                            {n ? n + ' pt' : 'None'}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Cycle
+                      <select
+                        value={editor.data.cycle_id || ''}
+                        onChange={(e) => field('cycle_id', e.target.value)}
+                      >
+                        <option value="">None</option>
+                        {cycles.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
                         ))}
                       </select>
                     </label>
