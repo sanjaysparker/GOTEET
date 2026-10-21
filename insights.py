@@ -22,6 +22,35 @@ def _age_days(value,today):
 
 def _ref(kind,item,label=None):return {'type':kind,'id':item.get('id') or item.get('full_name',''),'label':label or item.get('title') or item.get('name') or item.get('full_name','')}
 
+def _fresh(captured,at):
+    try:return dt.timedelta(0)<=at-dt.datetime.fromisoformat(captured).astimezone(IST)<=dt.timedelta(hours=24)
+    except ValueError:return False
+
+def _calendar(cal,today,open_tasks,add):
+    days={}
+    for e in cal.get('events',[]):
+        if e.get('all_day'):continue
+        try:start=dt.datetime.fromisoformat(e['start']).astimezone(IST);end=dt.datetime.fromisoformat(e['end']).astimezone(IST)
+        except (KeyError,ValueError,TypeError):continue
+        if start.date()<today:continue
+        days.setdefault(start.date().isoformat(),[]).append((start,end,e.get('title') or '(No title)'))
+    for day,items in sorted(days.items()):
+        items.sort(key=lambda x:x[0]);date=dt.date.fromisoformat(day);label=date.strftime('%a %d %b')
+        evidence=[{'type':'calendar_day','id':day,'label':label}]
+        pairs=sum((b[0]-a[1]).total_seconds()<600 for a,b in zip(items,items[1:]))
+        if pairs:add('warn','calendar_backtoback',f"{pairs} back-to-back meeting{'s' if pairs>1 else ''} on {label}",f"{len(items)} timed events that day; gaps under 10 min",evidence,'Add a 10-minute buffer or move one meeting.')
+        if len(items)>=6:add('warn','calendar_overload',f"{len(items)} timed events on {label}",'Heavy meeting load; measured from the Calendar snapshot.',evidence,'Decline or delegate optional events.')
+        # FOCUS: longest free stretch inside 09:00–18:00 IST
+        ws=dt.datetime.combine(date,dt.time(9),IST);we=dt.datetime.combine(date,dt.time(18),IST);cursor=ws;longest=0.0
+        for start,end,_ in items:
+            if cursor>=we:break
+            if start>cursor:longest=max(longest,(min(start,we)-cursor).total_seconds()/60)
+            cursor=max(cursor,end)
+        if cursor<we:longest=max(longest,(we-cursor).total_seconds()/60)
+        if longest<90:add('info','calendar_no_focus',f"No 90-minute focus block on {label}",f"Longest free block {int(longest)} min between 09:00 and 18:00 IST",evidence,'Protect a focus block on this day.')
+        due=[t for t in open_tasks if t.get('due')==day]
+        if due and len(items)>=3:add('warn','calendar_deadline_crunch',f"{due[0].get('key') or due[0]['title']} due {label} with {len(items)} meetings",f"{len(items)} timed events and {len(due)} task(s) due that day",evidence+[_ref('task',t) for t in due[:3]],'Move a meeting or start the task earlier.')
+
 def analyse(snap=None,clock=None):
     snap=snap or engine.snapshot()
     today=(clock or dt.datetime.now(IST)).astimezone(IST).date()
@@ -64,6 +93,9 @@ def analyse(snap=None,clock=None):
     for r in repos:
         run=(r.get('runs') or [{}])[0]
         if run.get('conclusion')=='failure':add('warn','ci_failure',f"{r['full_name'].split('/')[-1]} CI failing",f"{run.get('name','workflow')} on {run.get('head_branch','')} · {str(run.get('created_at',''))[:10]}",[{'type':'repo','id':r['full_name'],'label':r['full_name'],'url':run.get('html_url','')}],'Open the run and file a task with the failing job.')
+    # CALENDAR: only from a snapshot captured within the last 24 h, so stale meetings never drive advice
+    cal=snap.get('calendar') or {}
+    if cal.get('captured_at') and _fresh(cal['captured_at'],(clock or dt.datetime.now(IST)).astimezone(IST)):_calendar(cal,today,open_tasks,add)
     # FOLLOW-UPS captured from mail/sources but not tracked as work
     titles={(t['title'],t.get('project')) for t in tasks}
     for f in workspace.get('followups',[]):

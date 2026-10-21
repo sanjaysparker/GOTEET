@@ -10,7 +10,8 @@ LOCK=threading.Lock()
 THEMES={'noir','glacier','abyssal','cirrus','ember','phosphor','crimson','orchid','paper','graphite','midnight','light'}
 DEFAULTS={'display_name':'Sanju','timezone':'Asia/Kolkata','start_view':'Today',
  'github_enabled':True,'local_index_enabled':True,'google_enabled':True,'voice_enabled':True,'agent_enabled':True,'attachments_enabled':True,'media_preview_enabled':True,'file_browser_enabled':True,'updates_repository':'',
- 'role':'','organisation':'','location':'','website':'','bio':'','avatar_revision':'','activity_enabled':False,'theme':'noir','accent':'','density':'compact','reduce_motion':False,'auto_analysis':True,'analysis_provider':''}
+ 'role':'','organisation':'','location':'','website':'','bio':'','avatar_revision':'','activity_enabled':False,'theme':'noir','accent':'','density':'compact','reduce_motion':False,'auto_analysis':True,'analysis_provider':'',
+ 'system_calendar_enabled':False,'calendar_autotasks':False,'calendar_notifications':True,'reminder_lead_minutes':15}
 
 def get():
     path=DATA/'settings.json'
@@ -26,6 +27,8 @@ def save(value):
             if key not in value:continue
             if isinstance(default,bool):
                 if not isinstance(value[key],bool):raise ValueError('Permission values must be true or false')
+            elif isinstance(default,int):
+                if type(value[key]) is not int or not 0<=value[key]<=1440:raise ValueError('Reminder lead must be a whole number of minutes from 0 to 1440')
             elif not isinstance(value[key],str) or len(value[key])>(1000 if key=='bio' else 200):raise ValueError('Invalid preference value')
             current[key]=value[key]
         if not current['display_name'].strip():raise ValueError('Enter a display name')

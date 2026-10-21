@@ -7,9 +7,11 @@ import {
   Diamond,
   GripVertical,
   Plus,
+  RefreshCw,
 } from 'lucide-react';
 import { type Row } from '../lib/api';
 import { Avatar, Key, Meter, PriorityIcon, StatusIcon } from '../work/bits';
+import { shortDate } from '../lib/api';
 
 /* Roadmap: a timeline that reads like a calendar.
    Dates are never inferred: unscheduled work stays in the tray until a person places it. Dragging a bar
@@ -65,6 +67,8 @@ export function Roadmap({
   createTask,
   createProject,
   fail,
+  calendar,
+  syncCalendar,
 }: {
   projects: Row[];
   tasks: Row[];
@@ -78,6 +82,8 @@ export function Roadmap({
   createTask: () => void;
   createProject: () => void;
   fail: (e: unknown) => void;
+  calendar: Row | null;
+  syncCalendar?: () => void;
 }) {
   const [zoom, setZoom] = useState<Zoom>(() => (localStorage.getItem('gt.zoom') as Zoom) || 'week');
   const [anchor, setAnchor] = useState(todayN());
@@ -101,6 +107,10 @@ export function Roadmap({
   const end = start + Z.span - 1;
   const today = todayN();
 
+  // System calendar events are read-only context: they never move, and they are not dated tasks.
+  const calEvents: Row[] = (calendar?.events || [])
+    .filter((e: Row) => e.start && e.start.slice(0, 10) >= ISO(start - 1) && e.start.slice(0, 10) <= ISO(end))
+    .slice(0, 40);
   const insightFor = (id: string) => insights?.projects?.find((p: Row) => p.id === id);
   const shownProjects = projects.filter((p) => project === 'all' || p.id === project);
   const span = (s?: string, e?: string): [number, number] | null => {
@@ -192,7 +202,8 @@ export function Roadmap({
   function onKey(e: React.KeyboardEvent, kind: 'task' | 'project', item: Row) {
     if (!owner) return;
     const step = e.shiftKey ? 7 : 1;
-    const sp = kind === "task" ? span(item.start_date || item.due, item.due) : span(item.start_date, item.target_date);
+    const sp =
+      kind === 'task' ? span(item.start_date || item.due, item.due) : span(item.start_date, item.target_date);
     if (!sp) return;
     let [s, en] = sp;
     if (e.key === 'ArrowLeft') (s -= step), (en -= step);
@@ -321,6 +332,18 @@ export function Roadmap({
           ))}
         </select>
         <span className="grow" />
+        {syncCalendar && calendar?.enabled && (
+          <button
+            className="sm"
+            onClick={syncCalendar}
+            title={
+              calendar.captured_at ? `Last read ${calendar.captured_at}` : 'Read the system calendar now'
+            }
+          >
+            <RefreshCw size={13} />
+            Sync calendar
+          </button>
+        )}
         {owner && (
           <>
             <button className="sm" onClick={createProject}>
@@ -339,6 +362,22 @@ export function Roadmap({
         <div className="rm-grid" ref={area}>
           <div className="rm-left">
             <div className="rm-head rm-head-left">Work</div>
+            {calEvents.length > 0 && (
+              <>
+                <div className="rm-group static rm-cal-head">
+                  <CalendarDays size={13} />
+                  <span className="grow">Calendar · read-only</span>
+                  <span className="num faint">{calEvents.length}</span>
+                </div>
+                {calEvents.map((ev) => (
+                  <div key={ev.uid} className="rm-row-label rm-cal-row" title={ev.location || ''}>
+                    <span className="rm-cal-dot" />
+                    <span className="grow rm-title">{ev.title}</span>
+                    <span className="num faint rm-cal-when">{shortDate(ev.start)}</span>
+                  </div>
+                ))}
+              </>
+            )}
             {groups.map(({ p, own, done, health }) => (
               <React.Fragment key={p.id}>
                 <button
@@ -503,6 +542,30 @@ export function Roadmap({
                     </React.Fragment>
                   );
                 })}
+                {calEvents.length > 0 && (
+                  <>
+                    <div className="rm-lane project" />
+                    {calEvents.map((ev) => {
+                      const sp = span(ev.start.slice(0, 10), (ev.end || ev.start).slice(0, 10));
+                      return (
+                        <div key={ev.uid} className="rm-lane rm-cal-lane">
+                          {sp && (
+                            <div
+                              className="rm-cal-bar"
+                              style={{
+                                left: x(sp[0]),
+                                width: Math.max(Z.dayW, (sp[1] - sp[0] + 1) * Z.dayW),
+                              }}
+                              title={`${ev.title} · ${ev.calendar || ''}`}
+                            >
+                              {ev.title}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
                 {ungrouped.length > 0 && <div className="rm-lane project" />}
                 {ungrouped.map((t) => {
                   const tsp = span(t.start_date || t.due, t.due);

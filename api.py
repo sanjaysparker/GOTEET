@@ -48,6 +48,10 @@ import file_browser
 import diagnostics
 import agent_management
 import work
+import autosync
+import calendar_sync
+import logging
+import time
 from collector import DATA, STATE, now
 
 app=FastAPI(title='GOTEET local API',version='0.5.4')
@@ -123,7 +127,7 @@ def snapshot(request:Request):
     if identity['role']!='owner':
         # PERSONAL SOURCES STAY PRIVATE WHEN SHARING TEAM EXECUTION.
         value['inventory']={'github':[],'local':{'repos':[],'files':[]},'captured_at':None}
-        value['workspace']={};value['reports']=[];value['conversations']=[];value['media_tags']={}
+        value['workspace']={};value['calendar']={};value['reports']=[];value['conversations']=[];value['media_tags']={}
         value['summary']={'repositories':0,'unique_commits_30d':0,'local_checkouts':0,'media_files':0,'media_types':{},'active_tasks':sum(t['status']!='Done' for t in value['tasks'])}
     return value
 
@@ -587,6 +591,30 @@ def run_automation(automation_id:str):return work.dry_run(automation_id)
 def delete_automation(automation_id:str,request:Request):
     owner_only(request);result=work.delete('automations',automation_id);audit('automation:delete:'+automation_id,actor(request));return result
 
+# SYSTEM CALENDAR AND REMINDERS (owner only: not in the member allowlist)
+
+@app.get('/api/calendar/system')
+def calendar_system():
+    stored=calendar_sync.load()
+    return {'enabled':settings.get()['system_calendar_enabled'],'captured_at':stored.get('captured_at',''),'coverage':stored.get('coverage','Not synced yet'),'errors':stored.get('errors',[]),
+      'events':stored.get('events',[]),'reminders':[{k:v for k,v in r.items() if k!='body'} for r in stored.get('reminders',[])]}
+
+@app.post('/api/calendar/sync')
+def calendar_sync_now(request:Request):
+    owner_only(request);settings.require('system_calendar_enabled')
+    result=autosync.sync()
+    if isinstance(result.get('skipped'),str):raise HTTPException(409,result['skipped'])
+    audit('calendar:sync',actor(request));return result
+
+@app.get('/api/reminders/due')
+def reminders_due():return autosync.due_reminders()
+
+@app.post('/api/reminders/ack')
+def reminders_ack(value:dict):
+    identifier=value.get('id')
+    if not isinstance(identifier,str) or not identifier:raise ValueError('Reminder id is required')
+    work.mark_read([identifier]);return {'ok':True}
+
 # INSIGHTS (owner only: not in the member allowlist)
 
 @app.get('/api/insights')
@@ -612,6 +640,20 @@ def insights_run(value:dict,request:Request):
 @app.get('/api/audit')
 def audit_log():
     with engine.connect() as c:return [dict(x) for x in c.execute('SELECT * FROM audit ORDER BY created_at DESC LIMIT 100')]
+
+CALENDAR_LOG=logging.getLogger('goteet.calendar')
+
+def _calendar_loop():
+    # Every 15 minutes while enabled; a failed pass is logged and the next pass still runs.
+    while True:
+        time.sleep(900)
+        try:
+            if settings.get()['system_calendar_enabled']:autosync.sync()
+        except Exception as error:CALENDAR_LOG.warning('Calendar sync failed: %s',error)
+
+@app.on_event('startup')
+def start_calendar_background():
+    threading.Thread(target=_calendar_loop,name='calendar-sync',daemon=True).start()
 
 def main():
     global BASE_URL

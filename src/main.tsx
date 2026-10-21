@@ -44,6 +44,7 @@ import {
   Zap,
   Mail,
   Cpu,
+  Bell,
   Command as CommandIcon,
   MessageSquarePlus,
 } from 'lucide-react';
@@ -321,7 +322,9 @@ function App() {
     [analyses, setAnalyses] = useState<Row[]>([]),
     [analysing, setAnalysing] = useState(false),
     [palette, setPalette] = useState(false),
-    [focusTask, setFocusTask] = useState('');
+    [focusTask, setFocusTask] = useState(''),
+    [sysCal, setSysCal] = useState<Row | null>(null),
+    [calBusy, setCalBusy] = useState(false);
   const recorder = useRef<MediaRecorder | null>(null),
     dialog = useRef<HTMLDialogElement>(null),
     stream = useRef<MediaStream | null>(null);
@@ -353,6 +356,31 @@ function App() {
     quiet(api('/api/docs'), setDocs, []);
     quiet(api('/api/automations'), setRules, []);
     loadAgent();
+    loadSystemCalendar();
+  }
+  // SYSTEM CALENDAR IS OPT-IN: the endpoint refuses (403) until the Permissions switch is on, so the probe is silent.
+  function loadSystemCalendar() {
+    quiet(
+      api('/api/calendar/system').catch(() => ({ enabled: false })),
+      setSysCal,
+      { enabled: false },
+    );
+  }
+  async function syncCalendar() {
+    setCalBusy(true);
+    try {
+      const r = await api('/api/calendar/sync', {});
+      setNotice(
+        `Calendar synced · ${r.created} new · ${r.updated} updated · ${r.completed} completed · ${r.conflicts} need review`,
+      );
+      loadSystemCalendar();
+      await refresh();
+      loadAgent();
+    } catch (e) {
+      fail(e);
+    } finally {
+      setCalBusy(false);
+    }
   }
   function loadAgent() {
     quiet(api('/api/inbox'), setInbox, []);
@@ -439,6 +467,24 @@ function App() {
     const t = setTimeout(() => runAnalysis('', true), 8000);
     return () => clearTimeout(t);
   }, [snap, preferences, analyses]);
+  // REMINDERS BECOME OS NOTIFICATIONS ONCE: each unread inbox 'reminder' fires one notification, then is marked read.
+  const notified = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!preferences.calendar_notifications || !preferences.system_calendar_enabled) return;
+    if (typeof Notification === 'undefined') return;
+    if (Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+    const due = inbox.filter((i) => i.kind === 'reminder' && !i.read && !notified.current.has(i.id));
+    if (!due.length) return;
+    due.forEach((i) => notified.current.add(i.id));
+    if (Notification.permission === 'granted')
+      due.forEach(
+        (i) => new Notification('GOTEET · ' + i.title, { body: i.detail || '', silent: false, tag: i.id }),
+      );
+    setNotice(due.length === 1 ? due[0].title : `${due.length} reminders`);
+    api('/api/inbox/read', { ids: due.map((i) => i.id) })
+      .then(() => loadAgent())
+      .catch(() => {});
+  }, [inbox, preferences.calendar_notifications, preferences.system_calendar_enabled]);
   // ⌘K / CTRL+K OPENS THE PALETTE FROM ANYWHERE, including inside inputs.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1207,6 +1253,71 @@ function App() {
           {route === 'Today' && (
             <>
               <AgentBrief insights={insights} latest={analyses[0] || null} a={analyst} />
+              {sysCal?.enabled && (
+                <section className="cal-next">
+                  <div className="section-title">
+                    <h2>Next 24 hours</h2>
+                    <button className="text-link" onClick={() => syncCalendar()} disabled={calBusy}>
+                      {calBusy ? 'Syncing…' : 'Sync calendar'}
+                    </button>
+                  </div>
+                  {(() => {
+                    const horizon = Date.now() + 24 * 3600e3;
+                    const evs = (sysCal.events || [])
+                      .filter(
+                        (e: Row) =>
+                          new Date(e.start).getTime() >= Date.now() - 3600e3 &&
+                          new Date(e.start).getTime() <= horizon,
+                      )
+                      .sort((a: Row, b: Row) => a.start.localeCompare(b.start));
+                    const rems = (sysCal.reminders || []).filter(
+                      (r: Row) => !r.completed && r.due && new Date(r.due).getTime() <= horizon,
+                    );
+                    if (!evs.length && !rems.length)
+                      return (
+                        <p className="faint">
+                          Nothing scheduled in the next 24 hours
+                          {sysCal.captured_at ? ` · read ${shortDate(sysCal.captured_at)}` : ''}.
+                        </p>
+                      );
+                    return (
+                      <div className="cal-timeline">
+                        {evs.map((e: Row) => (
+                          <div key={e.uid} className="cal-item">
+                            <span className="num">
+                              {new Date(e.start).toLocaleTimeString('en-IN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                timeZone: displayZone,
+                              })}
+                            </span>
+                            <CalendarDays size={13} />
+                            <span className="grow">{e.title}</span>
+                            <small>{e.calendar}</small>
+                          </div>
+                        ))}
+                        {rems.map((r: Row) => (
+                          <div key={r.id} className="cal-item reminder">
+                            <span className="num">
+                              {r.due
+                                ? new Date(r.due).toLocaleTimeString('en-IN', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    timeZone: displayZone,
+                                  })
+                                : ''}
+                            </span>
+                            <Bell size={13} />
+                            <span className="grow">{r.title}</span>
+                            <small>{r.list}</small>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {sysCal.errors?.length > 0 && <p className="faint small">{sysCal.errors.join(' · ')}</p>}
+                </section>
+              )}
               <div className="stat-tiles">
                 {[
                   [
@@ -2036,6 +2147,21 @@ function App() {
                       'Shared attachments',
                       'Allow attaching files to shared work items and channels.',
                     ],
+                    [
+                      'system_calendar_enabled',
+                      'macOS Calendar & Reminders (read-only)',
+                      'Read events and reminders from the system apps so GOTEET can show them on the roadmap. macOS asks for permission once.',
+                    ],
+                    [
+                      'calendar_autotasks',
+                      'Create tasks from calendar items',
+                      'Create and update tasks for upcoming events and reminders. Moves you make in GOTEET are never overwritten; conflicts go to Inbox.',
+                    ],
+                    [
+                      'calendar_notifications',
+                      'Reminder notifications',
+                      'Show a macOS notification before tasks and events start.',
+                    ],
                   ].map(([key, title, detail]) => (
                     <div className="permission-row" key={key}>
                       <div>
@@ -2157,6 +2283,8 @@ function App() {
                 await refresh();
               }}
               fail={fail}
+              calendar={sysCal}
+              syncCalendar={calBusy ? undefined : syncCalendar}
             />
           )}
           {route === 'Concepts' && (

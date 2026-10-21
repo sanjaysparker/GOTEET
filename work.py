@@ -11,7 +11,7 @@ import engine
 from collector import IST, now
 
 RELATIONS=('blocks','relates','duplicates')
-KINDS=('assigned','mention','status','blocked','automation','agent','chat')
+KINDS=('assigned','mention','status','blocked','automation','agent','chat','reminder','conflict')
 TRIGGERS=('task_status','task_blocked_hours','task_created')
 ACTIONS=('set_field','notify','add_label')
 FIELDS=('status','priority','owner','cycle_id')
@@ -104,7 +104,8 @@ def after_task_save(previous,task,actor,automated=False):
     with engine.connect() as c:
         for field,old,new in changes:c.execute('INSERT INTO task_events VALUES(?,?,?,?,?,?,?)',(str(uuid.uuid4()),task['id'],field,str(old or ''),str(new or ''),str(actor)[:200],task['updated_at']))
     label=f"{task['key']} {task['title']}"
-    for field,old,new in changes:
+    # Calendar sync writes its own inbox items, so suppress these per-field notices for its saves.
+    for field,old,new in ([] if actor=='calendar-sync' else changes):
         if field=='owner' and new and new!='Unassigned':notify('assigned',f'{label} assigned to {new}',f'Previously {old or "Unassigned"}' if previous else 'New task','task',task['id'],actor)
         if field=='status' and previous is not None:
             notify('blocked' if new=='Blocked' else 'status',f'{label} is {new}' if new=='Blocked' else f'{label} moved to {new}',f'{old} → {new}','task',task['id'],actor)

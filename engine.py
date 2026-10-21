@@ -106,11 +106,12 @@ def snapshot():
         projects=[dict(x) for x in c.execute('SELECT * FROM projects ORDER BY updated_at DESC')]
     inventory=read_json('inventory.json')
     workspace=read_json('workspace.json')
+    calendar=read_json('system_calendar.json')
     # Fork histories overlap. Aggregate by SHA, never sum repository counts.
     unique={c.get('url',c['sha']).rsplit('/',1)[-1]:c for r in inventory.get('github',[]) for c in r['commits']}
     local=inventory.get('local',{})
     types=collections.Counter(f['category'] for f in local.get('files',[]))
-    result={'inventory':inventory,'workspace':workspace,'tasks':tasks,'reports':reports,'conversations':conversations,'concepts':concepts,'media_tags':media_tags,'projects':projects,
+    result={'inventory':inventory,'workspace':workspace,'calendar':calendar,'tasks':tasks,'reports':reports,'conversations':conversations,'concepts':concepts,'media_tags':media_tags,'projects':projects,
       'summary':{'repositories':len(inventory.get('github',[])),'unique_commits_30d':len(unique),
       'local_checkouts':len(local.get('repos',[])), 'media_files':len(local.get('files',[])),
       'media_types':dict(types),'active_tasks':sum(t['status']!='Done' for t in tasks)},

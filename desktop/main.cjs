@@ -479,9 +479,10 @@ app.whenReady().then(async () => {
         return new Response('Media is unavailable', { status: 503 });
       }
     });
-    session.defaultSession.setPermissionCheckHandler((_webContents, permission) => permission === 'media');
+    session.defaultSession.setPermissionCheckHandler((_webContents, permission) => ['media', 'notifications'].includes(permission));
     session.defaultSession.setPermissionRequestHandler(async (webContents, permission, callback) => {
-      if (webContents !== windowRef?.webContents || permission !== 'media') {
+      // NOTIFICATIONS ARE ALLOWED ONLY FOR OUR OWN WINDOW: reminders are shown locally, nothing is sent to a web origin.
+      if (webContents !== windowRef?.webContents || !['media', 'notifications'].includes(permission)) {
         callback(false);
         return;
       }
