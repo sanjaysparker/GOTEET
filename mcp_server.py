@@ -1,3 +1,4 @@
+from typing import Literal
 from mcp.server.mcpserver import MCPServer
 from workmate_client import call
 
@@ -13,10 +14,18 @@ def workmate_tasks()->list:
     """List shared workspace tasks."""
     return call('GET','/api/tasks')
 
+def supplied(**values):
+    """Only send fields the caller set, so updates merge instead of resetting stored values."""
+    return {k:v for k,v in values.items() if v is not None}
+
 @mcp.tool()
-def workmate_save_task(title:str,project:str='General',owner:str='Unassigned',status:str='Todo',priority:str='Normal',due:str='',source_url:str='',id:str='')->dict:
-    """Create or update a task in the running app. Due uses YYYY-MM-DD."""
-    return call('POST','/api/tasks',dict(title=title,project=project,owner=owner,status=status,priority=priority,due=due,source_url=source_url,id=id))
+def workmate_save_task(title:str|None=None,project:str|None=None,owner:str|None=None,
+    status:Literal['Backlog','Todo','In progress','In review','Blocked','Done']|None=None,
+    priority:Literal['Urgent','High','Normal','Low']|None=None,due:str|None=None,source_url:str|None=None,description:str|None=None,
+    estimate:int|None=None,labels:list[str]|None=None,cycle_id:str|None=None,parent_id:str|None=None,id:str|None=None)->dict:
+    """Create a task (title required) or update one by id. Omitted fields keep their stored values. Due uses YYYY-MM-DD."""
+    return call('POST','/api/tasks',supplied(title=title,project=project,owner=owner,status=status,priority=priority,due=due,source_url=source_url,
+      description=description,estimate=estimate,labels=labels,cycle_id=cycle_id,parent_id=parent_id,id=id or None))
 
 @mcp.tool()
 def workmate_projects()->list:
@@ -24,9 +33,10 @@ def workmate_projects()->list:
     return call('GET','/api/projects')
 
 @mcp.tool()
-def workmate_save_project(name:str,description:str='',status:str='Planned',start_date:str='',target_date:str='',id:str='')->dict:
-    """Save a project and its timeline. Status: Planned, Active, At risk, Paused, Done."""
-    return call('POST','/api/projects',dict(name=name,description=description,status=status,start_date=start_date,target_date=target_date,id=id))
+def workmate_save_project(name:str|None=None,description:str|None=None,status:Literal['Planned','Active','At risk','Paused','Done']|None=None,
+    start_date:str|None=None,target_date:str|None=None,id:str|None=None)->dict:
+    """Create a project (name required) or update one by id. Omitted fields keep their stored values."""
+    return call('POST','/api/projects',supplied(name=name,description=description,status=status,start_date=start_date,target_date=target_date,id=id or None))
 
 @mcp.tool()
 def workmate_concepts()->list:

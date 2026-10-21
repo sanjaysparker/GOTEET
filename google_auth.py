@@ -31,6 +31,27 @@ SCOPES={
  'calendar':'https://www.googleapis.com/auth/calendar.readonly',
  'contacts':'https://www.googleapis.com/auth/contacts.readonly',
  'google_tasks':'https://www.googleapis.com/auth/tasks.readonly'}
+ACCOUNT_KEYS=('gmail','drive','calendar','contacts','tasks','google_tasks','followups','account','daily_refresh','captured_at','last_refresh_attempt','refresh_errors','integration_note')
+
+def purge_account_data():
+    """Drop one account's imported snapshot and Drive preview state before another account (or none) takes over."""
+    import os
+    import tempfile
+    import media_library
+    DRIVE_SETUP.update(state='idle',message='')
+    for path in list(media_library.CLOUD_PREVIEWS):
+        media_library.CLOUD_PREVIEWS.pop(path,None)
+        try:os.unlink(path)  # app-owned cache copy, never an original
+        except OSError:pass
+    target=DATA/'workspace.json'
+    if not target.exists():return
+    workspace=json.loads(target.read_text())
+    kept={k:v for k,v in workspace.items() if k not in ACCOUNT_KEYS}
+    if kept==workspace:return
+    fd,temporary=tempfile.mkstemp(dir=DATA,prefix='workspace-',suffix='.tmp')
+    with os.fdopen(fd,'w') as handle:handle.write(json.dumps(kept,indent=2))
+    os.chmod(temporary,0o600);os.replace(temporary,target)
+
 LABELS={'gmail':'Gmail','drive':'Drive','calendar':'Calendar','contacts':'Contacts','google_tasks':'Google Tasks'}
 
 
@@ -83,6 +104,9 @@ def finish(code,state):
         profile.raise_for_status()
         token['profile']=profile.json()
         previous=read_secret('google-tokens') or {}
+        old_sub=previous.get('profile',{}).get('sub');new=token['profile']
+        workspace=json.loads((DATA/'workspace.json').read_text()) if (DATA/'workspace.json').exists() else {}
+        if (old_sub and old_sub!=new.get('sub')) or (workspace.get('account') and workspace['account']!=new.get('email')):purge_account_data()
         if previous.get('profile',{}).get('sub')==token['profile'].get('sub') and not token.get('refresh_token') and previous.get('refresh_token'):
             token['refresh_token']=previous['refresh_token']
         token.setdefault('scope',pending['scope'])
@@ -108,6 +132,7 @@ def disconnect():
         try:httpx.post('https://oauth2.googleapis.com/revoke',data={'token':token.get('refresh_token') or token['access_token']},timeout=15)
         except httpx.HTTPError:pass
         keyring.delete_password(SERVICE,'google-tokens')
+    purge_account_data()
     return {'connected':False}
 
 def import_profile():

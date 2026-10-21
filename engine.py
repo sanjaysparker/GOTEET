@@ -11,13 +11,37 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import threading
 import uuid
+import re
 from collector import DATA, ROOT, STATE, IST, now, collect
+
+STATUSES=('Backlog','Todo','In progress','In review','Blocked','Done')
+PRIORITIES=('Urgent','High','Normal','Low')
+MIGRATED=set();MIGRATE_LOCK=threading.Lock()
+
+class Connection(sqlite3.Connection):
+    """`with connect() as c:` commits or rolls back, then closes (sqlite3 alone leaves it open)."""
+    def __exit__(self,*exc):
+        try:return super().__exit__(*exc)
+        finally:self.close()
 
 def connect():
     DATA.mkdir(parents=True,exist_ok=True, mode=0o700)
-    c=sqlite3.connect(DATA/'workmate.sqlite3')
+    path=DATA/'workmate.sqlite3'
+    c=sqlite3.connect(path,timeout=5,factory=Connection)
     c.row_factory=sqlite3.Row
+    c.execute('PRAGMA busy_timeout=5000')
+    if str(path) not in MIGRATED:
+        with MIGRATE_LOCK:
+            if str(path) not in MIGRATED:migrate(c);MIGRATED.add(str(path))
+    return c
+
+def columns(c,table):return {r[1] for r in c.execute('PRAGMA table_info('+table+')')}
+
+def migrate(c):
+    """DDL and additive migrations; once per database per process. Existing rows are preserved."""
+    c.execute('PRAGMA journal_mode=WAL')
     c.executescript('''CREATE TABLE IF NOT EXISTS tasks(
       id TEXT PRIMARY KEY, title TEXT NOT NULL, project TEXT NOT NULL,
       owner TEXT NOT NULL, status TEXT NOT NULL, priority TEXT NOT NULL,
@@ -28,16 +52,44 @@ def connect():
       content TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS conversations(
       id TEXT PRIMARY KEY, question TEXT NOT NULL, answer TEXT NOT NULL,
-      created_at TEXT NOT NULL);''')
-    c.executescript('''CREATE TABLE IF NOT EXISTS concepts(id TEXT PRIMARY KEY,title TEXT NOT NULL,body TEXT NOT NULL,project TEXT NOT NULL,status TEXT NOT NULL,updated_at TEXT NOT NULL);
+      created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS concepts(id TEXT PRIMARY KEY,title TEXT NOT NULL,body TEXT NOT NULL,project TEXT NOT NULL,status TEXT NOT NULL,updated_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS media_tags(path TEXT PRIMARY KEY,collection TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS audit(id TEXT PRIMARY KEY,action TEXT NOT NULL,actor TEXT NOT NULL,created_at TEXT NOT NULL);''')
-    c.executescript('''CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT NOT NULL,status TEXT NOT NULL,start_date TEXT NOT NULL,target_date TEXT NOT NULL,updated_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS audit(id TEXT PRIMARY KEY,action TEXT NOT NULL,actor TEXT NOT NULL,created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT NOT NULL,status TEXT NOT NULL,start_date TEXT NOT NULL,target_date TEXT NOT NULL,updated_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS members(id TEXT PRIMARY KEY,name TEXT NOT NULL,token_hash TEXT NOT NULL,created_at TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,channel TEXT NOT NULL,author_id TEXT NOT NULL,author_name TEXT NOT NULL,body TEXT NOT NULL,created_at TEXT NOT NULL);''')
-    c.execute('''CREATE TABLE IF NOT EXISTS attachments(id TEXT PRIMARY KEY,target_type TEXT NOT NULL,target_id TEXT NOT NULL,name TEXT NOT NULL,size INTEGER NOT NULL,mime_type TEXT NOT NULL,sha256 TEXT NOT NULL,author_name TEXT NOT NULL,created_at TEXT NOT NULL)''')
-    c.execute("CREATE TABLE IF NOT EXISTS task_details(id TEXT PRIMARY KEY,description TEXT NOT NULL DEFAULT '',start_date TEXT NOT NULL DEFAULT '',checklist TEXT NOT NULL DEFAULT '[]')")
-    return c
+      CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,channel TEXT NOT NULL,author_id TEXT NOT NULL,author_name TEXT NOT NULL,body TEXT NOT NULL,created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS attachments(id TEXT PRIMARY KEY,target_type TEXT NOT NULL,target_id TEXT NOT NULL,name TEXT NOT NULL,size INTEGER NOT NULL,mime_type TEXT NOT NULL,sha256 TEXT NOT NULL,author_name TEXT NOT NULL,created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS task_details(id TEXT PRIMARY KEY,description TEXT NOT NULL DEFAULT '',start_date TEXT NOT NULL DEFAULT '',checklist TEXT NOT NULL DEFAULT '[]');
+      CREATE TABLE IF NOT EXISTS key_counters(prefix TEXT PRIMARY KEY,n INTEGER NOT NULL);''')
+    have=columns(c,'tasks')
+    for name,ddl in [('key',"TEXT NOT NULL DEFAULT ''"),('estimate','INTEGER NOT NULL DEFAULT 0'),('labels',"TEXT NOT NULL DEFAULT '[]'"),('cycle_id',"TEXT NOT NULL DEFAULT ''"),('parent_id',"TEXT NOT NULL DEFAULT ''")]:
+        if name not in have:c.execute('ALTER TABLE tasks ADD COLUMN "'+name+'" '+ddl)
+    for r in c.execute("SELECT id,project FROM tasks WHERE key='' ORDER BY created_at,id").fetchall():
+        c.execute('UPDATE tasks SET key=? WHERE id=?',(next_key(c,r['project']),r['id']))
+    import work
+    work.migrate(c)
+    c.commit()
+
+def key_prefix(c,project):
+    """Prefix from a saved project's name; tasks outside a saved project (e.g. General) use GOT."""
+    row=c.execute('SELECT name FROM projects WHERE name=?',(project,)).fetchone() if project else None
+    return (re.sub(r'[^A-Za-z0-9]','',row['name'])[:3].upper() if row else '') or 'GOT'
+
+def next_key(c,project):
+    prefix=key_prefix(c,project)
+    used=[int(r[0].rsplit('-',1)[1]) for r in c.execute("SELECT key FROM tasks WHERE key LIKE ?",(prefix+'-%',)) if r[0].rsplit('-',1)[1].isdigit()]
+    row=c.execute('SELECT n FROM key_counters WHERE prefix=?',(prefix,)).fetchone()
+    n=max([row['n'] if row else 0,*used])+1
+    c.execute('INSERT INTO key_counters VALUES(?,?) ON CONFLICT(prefix) DO UPDATE SET n=excluded.n',(prefix,n))
+    return f'{prefix}-{n}'
+
+def decode_task(task,detail=None):
+    task=dict(task);detail=detail or {}
+    try:task['labels']=json.loads(task.get('labels') or '[]')
+    except ValueError:task['labels']=[]
+    task.update(description=detail.get('description',''),start_date=detail.get('start_date',''),checklist=json.loads(detail.get('checklist','[]')))
+    return task
 
 def read_json(name):
     p=DATA/name
@@ -45,11 +97,8 @@ def read_json(name):
 
 def snapshot():
     with connect() as c:
-        tasks=[dict(x) for x in c.execute('SELECT * FROM tasks ORDER BY created_at DESC')]
         detail_rows={r['id']:dict(r) for r in c.execute('SELECT * FROM task_details')}
-        for task in tasks:
-            detail=detail_rows.get(task['id'],{})
-            task.update(description=detail.get('description',''),start_date=detail.get('start_date',''),checklist=json.loads(detail.get('checklist','[]')))
+        tasks=[decode_task(x,detail_rows.get(x['id'])) for x in c.execute('SELECT * FROM tasks ORDER BY created_at DESC')]
         reports=[dict(x) for x in c.execute('SELECT * FROM reports ORDER BY created_at DESC LIMIT 30')]
         conversations=[dict(x) for x in c.execute('SELECT * FROM conversations ORDER BY created_at DESC LIMIT 20')]
         concepts=[dict(x) for x in c.execute('SELECT * FROM concepts ORDER BY updated_at DESC')]
@@ -68,39 +117,75 @@ def snapshot():
       'generated_at':now()}
     return result
 
-def save_task(payload):
-    title=str(payload.get('title','')).strip()
-    if not title or len(title)>500:raise ValueError('Task title must contain 1–500 characters')
-    status=payload.get('status','Todo')
-    priority=payload.get('priority','Normal')
-    if status not in {'Todo','In progress','Blocked','Done'}:raise ValueError('Invalid task status')
-    if priority not in {'High','Normal','Low'}:raise ValueError('Invalid priority')
-    due=payload.get('due','')
-    if due:dt.date.fromisoformat(due)
-    values={'id':payload.get('id') or str(uuid.uuid4()),'title':title,'project':str(payload.get('project','General'))[:200],
-      'owner':str(payload.get('owner','Unassigned'))[:200],'status':status,'priority':priority,'due':due,
-      'source_url':str(payload.get('source_url',''))[:2000],'created_at':now(),'updated_at':now()}
+TASK_FIELDS=('title','project','owner','status','priority','due','source_url','description','start_date','checklist','estimate','labels','cycle_id','parent_id')
+
+def text(value,name,limit):
+    if not isinstance(value,str):raise ValueError(name+' must be text')
+    if len(value)>limit:raise ValueError(f'{name} exceeds {limit} characters')
+    return value
+
+def iso_date(value,name):
+    text(value,name,10)
+    if value:
+        try:dt.date.fromisoformat(value)
+        except ValueError:raise ValueError(name+' must use YYYY-MM-DD')
+    return value
+
+def save_task(payload,actor='desktop',automated=False):
+    """Create, or merge only the supplied keys over the stored task. Omitted/None keys keep stored values."""
+    if not isinstance(payload,dict):raise ValueError('Task must be an object')
+    identifier=payload.get('id') or str(uuid.uuid4())
+    if not isinstance(identifier,str) or len(identifier)>200:raise ValueError('Invalid task id')
+    supplied={k:payload[k] for k in TASK_FIELDS if k in payload and payload[k] is not None}
     with connect() as c:
-        previous=c.execute('SELECT * FROM task_details WHERE id=?',(values['id'],)).fetchone()
-        detail=dict(previous) if previous else {'description':'','start_date':'','checklist':'[]'}
-        description=str(payload.get('description',detail['description']))
-        if len(description)>30000:raise ValueError('Description exceeds 30000 characters')
-        start_date=payload.get('start_date',detail['start_date'])
-        if start_date:dt.date.fromisoformat(start_date)
+        row=c.execute('SELECT * FROM tasks WHERE id=?',(identifier,)).fetchone()
+        stored=c.execute('SELECT * FROM task_details WHERE id=?',(identifier,)).fetchone()
+        previous=decode_task(row,dict(stored) if stored else {}) if row else None
+        base=previous or {'title':'','project':'General','owner':'Unassigned','status':'Todo','priority':'Normal','due':'','source_url':'',
+          'description':'','start_date':'','checklist':[],'estimate':0,'labels':[],'cycle_id':'','parent_id':''}
+        if not previous and stored:base.update(description=stored['description'],start_date=stored['start_date'],checklist=json.loads(stored['checklist']))
+        v={**base,**supplied}
+        title=text(v['title'],'Title',100000).strip()
+        if not title or len(title)>500:raise ValueError('Task title must contain 1–500 characters')
+        if text(v['status'],'Status',40) not in STATUSES:raise ValueError('Invalid task status')
+        if text(v['priority'],'Priority',40) not in PRIORITIES:raise ValueError('Invalid priority')
+        due=iso_date(v['due'],'Due date');start_date=iso_date(v['start_date'],'Start date')
         if start_date and due and start_date>due:raise ValueError('Due date must be on or after start date')
-        checklist=payload.get('checklist',json.loads(detail['checklist']))
+        description=text(v['description'],'Description',30000)
+        checklist=v['checklist']
         if not isinstance(checklist,list) or len(checklist)>100:raise ValueError('Checklist must contain at most 100 items')
         for item in checklist:
             if not isinstance(item,dict) or not isinstance(item.get('text'),str) or not item['text'].strip() or len(item['text'])>500 or type(item.get('done')) is not bool:raise ValueError('Invalid checklist item')
         checklist=[{'text':item['text'].strip(),'done':item['done']} for item in checklist]
-        c.execute('''INSERT INTO tasks VALUES(:id,:title,:project,:owner,:status,:priority,:due,:source_url,:created_at,:updated_at)
+        estimate=v['estimate']
+        if type(estimate) is not int or not 0<=estimate<=1000:raise ValueError('Estimate must be a whole number 0–1000')
+        labels=v['labels']
+        if not isinstance(labels,list) or len(labels)>20 or any(not isinstance(x,str) or not x.strip() or len(x)>50 for x in labels):raise ValueError('Labels must be at most 20 non-empty texts of up to 50 characters')
+        labels=list(dict.fromkeys(x.strip() for x in labels))
+        cycle_id=text(v['cycle_id'],'Cycle',200);parent_id=text(v['parent_id'],'Parent task',200)
+        if cycle_id and not c.execute('SELECT id FROM cycles WHERE id=?',(cycle_id,)).fetchone():raise ValueError('Unknown cycle')
+        if parent_id:
+            seen={identifier};cursor=parent_id
+            while cursor:
+                if cursor in seen:raise ValueError('A task cannot be its own parent')
+                seen.add(cursor);parent=c.execute('SELECT parent_id FROM tasks WHERE id=?',(cursor,)).fetchone()
+                if not parent:raise ValueError('Unknown parent task')
+                cursor=parent['parent_id']
+        values={'id':identifier,'title':title,'project':text(v['project'],'Project',100000)[:200] or 'General','owner':text(v['owner'],'Owner',100000)[:200] or 'Unassigned',
+          'status':v['status'],'priority':v['priority'],'due':due,'source_url':text(v['source_url'],'Source URL',100000)[:2000],'created_at':now(),'updated_at':now(),
+          'estimate':estimate,'labels':json.dumps(labels),'cycle_id':cycle_id,'parent_id':parent_id,'key':previous['key'] if previous and previous.get('key') else ''}
+        if not values['key']:values['key']=next_key(c,values['project'])
+        c.execute('''INSERT INTO tasks(id,title,project,owner,status,priority,due,source_url,created_at,updated_at,key,estimate,labels,cycle_id,parent_id)
+          VALUES(:id,:title,:project,:owner,:status,:priority,:due,:source_url,:created_at,:updated_at,:key,:estimate,:labels,:cycle_id,:parent_id)
           ON CONFLICT(id) DO UPDATE SET title=excluded.title,project=excluded.project,
           owner=excluded.owner,status=excluded.status,priority=excluded.priority,due=excluded.due,
-          source_url=excluded.source_url,updated_at=excluded.updated_at''',values)
-        c.execute('INSERT INTO task_details VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET description=excluded.description,start_date=excluded.start_date,checklist=excluded.checklist',(values['id'],description,start_date,json.dumps(checklist)))
-        result=dict(c.execute('SELECT * FROM tasks WHERE id=?',(values['id'],)).fetchone())
-        result.update(description=description,start_date=start_date,checklist=checklist)
-        return result
+          source_url=excluded.source_url,updated_at=excluded.updated_at,estimate=excluded.estimate,labels=excluded.labels,
+          cycle_id=excluded.cycle_id,parent_id=excluded.parent_id''',values)
+        c.execute('INSERT INTO task_details VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET description=excluded.description,start_date=excluded.start_date,checklist=excluded.checklist',(identifier,description,start_date,json.dumps(checklist)))
+        result=decode_task(c.execute('SELECT * FROM tasks WHERE id=?',(identifier,)).fetchone(),{'description':description,'start_date':start_date,'checklist':json.dumps(checklist)})
+    import work
+    work.after_task_save(previous,result,actor,automated)
+    return result
 
 def report(kind='daily', clock=None):
     if kind not in {'daily','weekly'}:raise ValueError('Report kind must be daily or weekly')

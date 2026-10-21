@@ -47,6 +47,7 @@ import model_setup
 import file_browser
 import diagnostics
 import agent_management
+import work
 from collector import DATA, STATE, now
 
 app=FastAPI(title='GOTEET local API',version='0.5.4')
@@ -54,6 +55,7 @@ TOKEN=os.environ.get('WORKMATE_API_TOKEN') or secrets.token_urlsafe(48)
 INSTANCE=str(uuid.uuid4())
 BASE_URL=''
 SYNC_LOCK=threading.Lock()
+ITEM_ROUTES=('/api/tasks','/api/projects','/api/concepts','/api/relations','/api/cycles','/api/docs','/api/views','/api/automations')
 VOICE_LOCK=threading.Lock()
 WHISPER=None
 
@@ -68,11 +70,16 @@ async def authenticate(request:Request,call_next):
             row=c.execute('SELECT id,name FROM members WHERE token_hash=?',(hashlib.sha256(supplied.encode()).hexdigest(),)).fetchone()
             if row:member=dict(row)
     request.state.identity={'id':'owner','name':settings.get()['display_name'],'role':'owner'} if owner else ({**member,'role':'member'} if member else None)
+    # Only the owner token may attribute writes to a named client (CLI, MCP, agent); members are always themselves.
+    claimed=request.headers.get('x-goteet-actor','').strip()[:100]
+    request.state.actor=(claimed if owner and claimed else (request.state.identity or {}).get('name','desktop'))
     if not public and not owner and not member:
         from fastapi.responses import JSONResponse
         return JSONResponse({'detail':'GOTEET local API token required'},status_code=401)
-    shared={'/api/snapshot','/api/tasks','/api/concepts','/api/projects','/api/chat','/api/team','/api/attachments','/api/attachments/upload','/api/attachments/download'}
-    if member and request.url.path not in shared:
+    shared={'/api/snapshot','/api/tasks','/api/concepts','/api/projects','/api/chat','/api/team','/api/attachments','/api/attachments/upload','/api/attachments/download',
+      '/api/relations','/api/cycles','/api/docs','/api/views','/api/inbox','/api/inbox/read','/api/inbox/snooze','/api/automations'}
+    # Item routes (/api/tasks/{id}, /api/automations/{id}/run …) follow their collection; DELETE and automation writes re-check owner in the route.
+    if member and request.url.path not in shared and not any(request.url.path.startswith(x+'/') for x in ITEM_ROUTES):
         from fastapi.responses import JSONResponse
         return JSONResponse({'detail':'This source belongs to the workspace owner'},status_code=403)
     origin=request.headers.get('origin','')
@@ -86,6 +93,11 @@ async def invalid(request,exc):
     from fastapi.responses import JSONResponse
     return JSONResponse({'detail':str(exc)},status_code=400)
 
+@app.exception_handler(work.NotFound)
+async def missing(request,exc):
+    from fastapi.responses import JSONResponse
+    return JSONResponse({'detail':str(exc)},status_code=404)
+
 @app.exception_handler(PermissionError)
 async def denied(request,exc):
     from fastapi.responses import JSONResponse
@@ -94,11 +106,17 @@ async def denied(request,exc):
 def audit(action,actor='desktop'):
     with engine.connect() as c:c.execute('INSERT INTO audit VALUES(?,?,?,?)',(str(uuid.uuid4()),action,actor,now()))
 
+def actor(request:Request):return getattr(request.state,'actor','desktop')
+
+def owner_only(request:Request):
+    if request.state.identity['role']!='owner':raise PermissionError('Only the workspace owner can do this')
+
 @app.get('/api/health')
 def health():return {'ok':True,'version':'0.5.4','instance':INSTANCE,'pid':os.getpid()}
 
 @app.get('/api/snapshot')
 def snapshot(request:Request):
+    work.evaluate_blocked()
     value=engine.snapshot()
     identity=request.state.identity
     value['identity']=identity
@@ -252,7 +270,10 @@ def upload_attachment(request:Request,target_type:str,target_id:str,file:UploadF
     settings.require('attachments_enabled')
     tables={'task':'tasks','project':'projects','concept':'concepts'}
     if target_type=='channel':
-        if target_id not in {'general','development','operations'}:raise ValueError('Choose a workspace channel')
+        if target_id.startswith('project-'):
+            with engine.connect() as c:
+                if not c.execute('SELECT id FROM projects WHERE id=?',(target_id[8:],)).fetchone():raise ValueError('Choose a workspace channel')
+        elif target_id not in {'general','development','operations'}:raise ValueError('Choose a workspace channel')
     elif target_type in tables:
         with engine.connect() as c:
             if not c.execute('SELECT id FROM '+tables[target_type]+' WHERE id=?',(target_id,)).fetchone():raise ValueError('Save the work item before attaching a file')
@@ -260,6 +281,7 @@ def upload_attachment(request:Request,target_type:str,target_id:str,file:UploadF
     content=file.file.read(25_000_001)
     if len(content)>25_000_000:raise ValueError('Keep attachments under 25 MB')
     identifier=str(uuid.uuid4());name=Path(file.filename or 'attachment').name.replace('\\','_')[:250]
+    if name.strip() in {'','.','..'}:raise ValueError('Choose a file with a valid name')
     record={'id':identifier,'target_type':target_type,'target_id':target_id,'name':name,'size':len(content),'mime_type':file.content_type or 'application/octet-stream',
       'sha256':hashlib.sha256(content).hexdigest(),'author_name':request.state.identity['name'],'created_at':now()}
     directory=DATA/'attachments';directory.mkdir(exist_ok=True,mode=0o700)
@@ -267,7 +289,7 @@ def upload_attachment(request:Request,target_type:str,target_id:str,file:UploadF
     with path.open('xb') as handle:handle.write(content)
     path.chmod(0o600)
     with engine.connect() as c:c.execute('INSERT INTO attachments VALUES(:id,:target_type,:target_id,:name,:size,:mime_type,:sha256,:author_name,:created_at)',record)
-    audit('attachment:'+identifier,record['author_name']);return record
+    audit('attachment:'+identifier,actor(request));return record
 
 @app.get('/api/attachments/download')
 def download_attachment(id:str):
@@ -277,7 +299,7 @@ def download_attachment(id:str):
 
 @app.post('/api/tasks')
 def save_task(value:dict,request:Request):
-    result=engine.save_task(value);audit('task:'+result['id'],request.state.identity['name']);return result
+    result=engine.save_task(value,actor=actor(request));audit('task:'+result['id'],actor(request));return result
 
 @app.get('/api/concepts')
 def concepts():return engine.snapshot()['concepts']
@@ -285,12 +307,12 @@ def concepts():return engine.snapshot()['concepts']
 @app.post('/api/concepts')
 def save_concept(value:dict,request:Request):
     record=operations.save_concept(value)
-    audit('concept:'+record['id'],request.state.identity['name']);return record
+    audit('concept:'+record['id'],actor(request));return record
 
 @app.post('/api/projects')
 def save_project(value:dict,request:Request):
     record=operations.save_project(value)
-    audit('project:'+record['id'],request.state.identity['name']);return record
+    audit('project:'+record['id'],actor(request));return record
 
 @app.get('/api/projects')
 def projects():return engine.snapshot()['projects']
@@ -298,7 +320,7 @@ def projects():return engine.snapshot()['projects']
 @app.get('/api/team')
 def team():
     with engine.connect() as c:
-        return [{'id':'owner','name':'Sanju','role':'owner'}]+[dict(x)|{'role':'member'} for x in c.execute('SELECT id,name,created_at FROM members')]
+        return [{'id':'owner','name':settings.get()['display_name'],'role':'owner'}]+[dict(x)|{'role':'member'} for x in c.execute('SELECT id,name,created_at FROM members')]
 
 @app.post('/api/team/invite')
 def invite(value:dict):
@@ -326,7 +348,8 @@ def post_chat(value:dict,request:Request):
     identity=request.state.identity
     record={'id':str(uuid.uuid4()),'channel':channel,'author_id':identity['id'],'author_name':identity['name'],'body':body,'created_at':now()}
     with engine.connect() as c:c.execute('INSERT INTO messages VALUES(:id,:channel,:author_id,:author_name,:body,:created_at)',record)
-    audit('chat:'+record['id'],identity['name']);return record
+    work.mentions(body,channel,identity['name'])
+    audit('chat:'+record['id'],actor(request));return record
 
 @app.post('/api/media/tag')
 def tag_media(value:dict):
@@ -394,8 +417,11 @@ def assistant(value:dict):
     return record
 
 @app.post('/api/agent/plan')
-def agent_plan(value:dict):
-    return agent.plan(str(value.get('question','')),value.get('provider','codex'),value.get('model',''))
+def agent_plan(value:dict,request:Request):
+    settings.require('agent_enabled')
+    record=agent.plan(str(value.get('question','')),value.get('provider','codex'),value.get('model',''))
+    work.notify('agent','Agent plan ready for review',record['plan'].get('summary',''),'plan',record['id'],actor(request))
+    audit('agent:plan:'+record['id'],actor(request));return record
 
 @app.post('/api/agent/execute')
 def agent_execute(value:dict):
@@ -475,6 +501,113 @@ def google_profile():
 
 @app.post('/api/google/disconnect')
 def google_disconnect():return google_auth.disconnect()
+
+# WORK MANAGEMENT API v1 (docs/API_V1.md)
+
+@app.delete('/api/tasks/{task_id}')
+def delete_task(task_id:str,request:Request):
+    owner_only(request);result=work.delete_task(task_id);audit('task:delete:'+task_id,actor(request));return result
+
+@app.delete('/api/projects/{project_id}')
+def delete_project(project_id:str,request:Request):
+    owner_only(request);result=work.delete('projects',project_id);audit('project:delete:'+project_id,actor(request));return result
+
+@app.delete('/api/concepts/{concept_id}')
+def delete_concept(concept_id:str,request:Request):
+    owner_only(request);result=work.delete('concepts',concept_id);audit('concept:delete:'+concept_id,actor(request));return result
+
+@app.get('/api/relations')
+def relations(task_id:str=''):return work.relations(task_id)
+
+@app.post('/api/relations')
+def save_relation(value:dict,request:Request):
+    record=work.save_relation(value);audit('relation:'+record['id'],actor(request));return record
+
+@app.delete('/api/relations/{relation_id}')
+def delete_relation(relation_id:str,request:Request):
+    owner_only(request);result=work.delete('relations',relation_id);audit('relation:delete:'+relation_id,actor(request));return result
+
+@app.get('/api/cycles')
+def cycles():return work.cycles()
+
+@app.post('/api/cycles')
+def save_cycle(value:dict,request:Request):
+    record=work.save_cycle(value);audit('cycle:'+record['id'],actor(request));return record
+
+@app.delete('/api/cycles/{cycle_id}')
+def delete_cycle(cycle_id:str,request:Request):
+    owner_only(request);result=work.delete_cycle(cycle_id,actor(request));audit('cycle:delete:'+cycle_id,actor(request));return result
+
+@app.get('/api/docs')
+def docs():return work.docs()
+
+@app.post('/api/docs')
+def save_doc(value:dict,request:Request):
+    record=work.save_doc(value,request.state.identity['name']);audit('doc:'+record['id'],actor(request));return record
+
+@app.delete('/api/docs/{doc_id}')
+def delete_doc(doc_id:str,request:Request):
+    owner_only(request);result=work.delete('docs',doc_id);audit('doc:delete:'+doc_id,actor(request));return result
+
+@app.get('/api/views')
+def views():return work.views()
+
+@app.post('/api/views')
+def save_view(value:dict,request:Request):
+    record=work.save_view(value);audit('view:'+record['id'],actor(request));return record
+
+@app.delete('/api/views/{view_id}')
+def delete_view(view_id:str,request:Request):
+    owner_only(request);result=work.delete('views',view_id);audit('view:delete:'+view_id,actor(request));return result
+
+@app.get('/api/inbox')
+def inbox():return work.inbox()
+
+@app.post('/api/inbox/read')
+def inbox_read(value:dict):return work.mark_read(value.get('ids'))
+
+@app.post('/api/inbox/snooze')
+def inbox_snooze(value:dict):return work.snooze(value)
+
+@app.get('/api/automations')
+def automations():return work.automations()
+
+@app.post('/api/automations')
+def save_automation(value:dict,request:Request):
+    owner_only(request);record=work.save_automation(value);audit('automation:'+record['id'],actor(request));return record
+
+@app.post('/api/automations/{automation_id}/toggle')
+def toggle_automation(automation_id:str,request:Request):
+    owner_only(request);record=work.toggle_automation(automation_id);audit('automation:toggle:'+automation_id,actor(request));return record
+
+@app.post('/api/automations/{automation_id}/run')
+def run_automation(automation_id:str):return work.dry_run(automation_id)
+
+@app.delete('/api/automations/{automation_id}')
+def delete_automation(automation_id:str,request:Request):
+    owner_only(request);result=work.delete('automations',automation_id);audit('automation:delete:'+automation_id,actor(request));return result
+
+# INSIGHTS (owner only: not in the member allowlist)
+
+@app.get('/api/insights')
+def insights_analyse():
+    import insights
+    return insights.analyse()
+
+@app.get('/api/insights/history')
+def insights_history():
+    import insights
+    return insights.history()
+
+@app.post('/api/insights/run')
+def insights_run(value:dict,request:Request):
+    import insights
+    settings.require('agent_enabled')
+    try:result=insights.run(str(value.get('provider') or 'codex'),str(value.get('model') or ''),str(value.get('focus') or ''))
+    except FileNotFoundError:raise ValueError('The selected AI provider is not installed. Install or connect it in Models, then retry.')
+    except subprocess.TimeoutExpired:raise ValueError('The AI analysis timed out. Retry, or choose a faster model in Models.')
+    if result.get('plan'):work.notify('agent','AI analysis ready',result['analysis'].get('summary',''),'plan',result['plan']['id'],actor(request))
+    audit('insights:run',actor(request));return result
 
 @app.get('/api/audit')
 def audit_log():

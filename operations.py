@@ -4,18 +4,30 @@ import uuid
 import engine
 from collector import now
 
+PROJECT_FIELDS=('name','description','status','start_date','target_date')
+
 def save_project(value):
-    name=str(value.get('name','')).strip()
-    if not name or len(name)>300:raise ValueError('Enter a project name of 1–300 characters')
-    status=value.get('status','Planned')
-    if status not in {'Planned','Active','At risk','Paused','Done'}:raise ValueError('Invalid project status')
-    start=value.get('start_date','');target=value.get('target_date','')
-    for date in [start,target]:
-        if date:dt.date.fromisoformat(date)
-    if start and target and start>target:raise ValueError('Target date must be on or after the start date')
-    record={'id':value.get('id') or str(uuid.uuid4()),'name':name,'description':str(value.get('description',''))[:10000],
-      'status':status,'start_date':start,'target_date':target,'updated_at':now()}
-    with engine.connect() as c:c.execute('''INSERT INTO projects VALUES(:id,:name,:description,:status,:start_date,:target_date,:updated_at)
+    """Create, or merge only the supplied keys over the stored project."""
+    if not isinstance(value,dict):raise ValueError('Project must be an object')
+    identifier=value.get('id') or str(uuid.uuid4())
+    if not isinstance(identifier,str) or len(identifier)>200:raise ValueError('Invalid project id')
+    with engine.connect() as c:
+        row=c.execute('SELECT * FROM projects WHERE id=?',(identifier,)).fetchone()
+        base=dict(row) if row else {'name':'','description':'','status':'Planned','start_date':'','target_date':''}
+        v={**base,**{k:value[k] for k in PROJECT_FIELDS if k in value and value[k] is not None}}
+        for k in PROJECT_FIELDS:
+            if not isinstance(v[k],str):raise ValueError('Project '+k.replace('_',' ')+' must be text')
+        name=v['name'].strip()
+        if not name or len(name)>300:raise ValueError('Enter a project name of 1–300 characters')
+        if v['status'] not in {'Planned','Active','At risk','Paused','Done'}:raise ValueError('Invalid project status')
+        start=v['start_date'];target=v['target_date']
+        for date in [start,target]:
+            if date:
+                try:dt.date.fromisoformat(date)
+                except ValueError:raise ValueError('Project dates must use YYYY-MM-DD')
+        if start and target and start>target:raise ValueError('Target date must be on or after the start date')
+        record={'id':identifier,'name':name,'description':v['description'][:10000],'status':v['status'],'start_date':start,'target_date':target,'updated_at':now()}
+        c.execute('''INSERT INTO projects VALUES(:id,:name,:description,:status,:start_date,:target_date,:updated_at)
       ON CONFLICT(id) DO UPDATE SET name=excluded.name,description=excluded.description,status=excluded.status,start_date=excluded.start_date,target_date=excluded.target_date,updated_at=excluded.updated_at''',record)
     return record
 
