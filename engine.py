@@ -71,6 +71,8 @@ def migrate(c):
     work.migrate(c)
     import goals
     goals.migrate(c)
+    import agent_observer
+    agent_observer.migrate(c)
     c.commit()
 
 def key_prefix(c,project):
@@ -236,6 +238,8 @@ def report(kind='daily', clock=None):
       'Collector errors: '+json.dumps(s['inventory'].get('errors',[])),
       'Gmail and Drive are bounded imported snapshots, not continuously connected app integrations. Calendar snapshot covers only the explicitly inspected date range. No source-code correctness or employee performance conclusion is implied.']
     if s['inventory'].get('github_stale'):lines.append('WARNING: GitHub refresh failed; retained previous snapshot.')
+    try:lines+=__import__('agent_observer').report_lines(start,end)
+    except Exception as error:lines+=['','## Activity',f'Activity section unavailable: {type(error).__name__}.']
     content='\n'.join(lines)
     record={'id':str(uuid.uuid4()),'kind':kind,'created_at':end.isoformat(),'content':content}
     with connect() as c:c.execute('INSERT INTO reports VALUES(:id,:kind,:created_at,:content)',record)

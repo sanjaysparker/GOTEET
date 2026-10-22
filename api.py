@@ -244,7 +244,11 @@ def models_downloads():
 
 @app.post('/api/settings')
 def save_settings(value:dict):
-    result=settings.save(value);audit('settings:updated');return result
+    import agent_observer
+    before=settings.get()['agent_observer_enabled']
+    result=settings.save(value);audit('settings:updated')
+    if result['agent_observer_enabled'] and not before:agent_observer.kick()
+    return result
 
 @app.post('/api/profile/photo')
 async def profile_photo(file:UploadFile=File(...)):
@@ -679,6 +683,35 @@ def insights_run(value:dict,request:Request):
     if result.get('plan'):work.notify('agent','AI analysis ready',result['analysis'].get('summary',''),'plan',result['plan']['id'],actor(request))
     audit('insights:run',actor(request));return result
 
+# AGENT OBSERVER: passive local session/git/process metadata, opt-in, owner only (not in the member allowlist)
+
+@app.get('/api/activity/overview')
+def activity_overview(days:int=14):
+    import agent_observer
+    return agent_observer.overview(days)
+
+@app.post('/api/activity/scan')
+def activity_scan(request:Request):
+    import agent_observer
+    owner_only(request);result=agent_observer.scan();audit('activity:scan',actor(request));return result
+
+@app.get('/api/activity/map')
+def activity_map_get():
+    import agent_observer
+    return agent_observer.get_map()
+
+@app.post('/api/activity/map')
+def activity_map_set(value:list[dict],request:Request):
+    import agent_observer
+    owner_only(request);result=agent_observer.set_map(value)
+    # THE CACHE SIGNATURE COVERS THE MAPPING, SO THIS SCAN RE-DERIVES PROJECT NAMES
+    agent_observer.kick();audit('activity:map',actor(request));return result
+
+@app.delete('/api/activity/data')
+def activity_wipe(request:Request):
+    import agent_observer
+    owner_only(request);result=agent_observer.wipe();audit('activity:wipe',actor(request));return result
+
 @app.get('/api/audit')
 def audit_log():
     with engine.connect() as c:return [dict(x) for x in c.execute('SELECT * FROM audit ORDER BY created_at DESC LIMIT 100')]
@@ -692,6 +725,11 @@ def _calendar_loop():
         try:
             if settings.get()['system_calendar_enabled']:autosync.sync()
         except Exception as error:CALENDAR_LOG.warning('Calendar sync failed: %s',error)
+
+@app.on_event('startup')
+def start_observer_background():
+    import agent_observer
+    agent_observer.start()
 
 @app.on_event('startup')
 def start_calendar_background():

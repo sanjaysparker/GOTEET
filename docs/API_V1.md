@@ -180,3 +180,32 @@ Insights (`GET /api/insights`) adds `goal_health` (Off track critical, At risk w
 - Member authorization is per route, not per object (members can edit any task).
 - `task_blocked_hours` is evaluated only when the inbox or snapshot is read, not on a timer.
 - Cycle history is best-effort (see above).
+
+## Agent observer (passive local activity)
+
+Opt-in, local-only, metadata-only. Implementation: `agent_observer.py`; settings `agent_observer_enabled` (default `false`) and `agent_observer_titles` (default `false`). All routes are owner only (members get 403). While disabled nothing under `~/.claude` or `~/.codex` is read and `GET /api/activity/overview` returns `{enabled:false, coverage:"Off. Enable in Settings → Permissions.", …empty lists}`; `POST /api/activity/scan` returns 403.
+
+| Route | Purpose |
+|---|---|
+| `GET /api/activity/overview?days=14` | `{enabled, captured_at, coverage, errors, now, mcp_servers, sessions (latest 60), daily, projects, correlations, mistakes, suggestions, totals}`; stored data, no scan. `days` 1-60. |
+| `POST /api/activity/scan` | Scan now (also runs on enable, then every 5 min in a background thread); returns the overview. 20 s budget; partial coverage is reported in `coverage`/`errors`. |
+| `GET/POST /api/activity/map` | Ordered override rules `[{pattern, project}]` (POST replaces the list; pattern 1-300, project 1-100, max 200). A rule matches a cwd by path prefix or substring and wins over every other mapping. |
+| `DELETE /api/activity/data` | Wipes sessions, daily rows, scan state and the parse cache; keeps your mapping rules. Audited. |
+
+Sources: Claude Code `~/.claude/projects/*/*.jsonl`; Codex `~/.codex/sessions/**/rollout-*.jsonl` and uncompressed `archived_sessions`; psutil for running agents (`claude codex aider cursor-agent gemini`, plus node/python launched agents) and an MCP server process count; read-only `git log/status/rev-parse` (10 s timeout, optional locks off, never fetch) for inventory repos and repos seen in sessions. Lookback 14 days, rows retained 60 days; unchanged files are not reparsed (cache keyed by file mtime and size plus a mapping signature).
+
+Never persisted or returned: message text (except a redacted 100-character `title` when `agent_observer_titles` is on), tool inputs/outputs, commands, file names or paths, tokens. `now[].cwd` is always `""` (paths are not returned). Persisted: counts, per-project time blocks, hashed ids, branch names, project names.
+
+Project mapping order: override, saved GOTEET project (name equals repo-root folder or any path segment, case and `-_ ` ignored), git repo root folder (linked worktrees map to their main checkout), Claude scratch workspace `Scratch`, home directory `Home`, else the last folder.
+
+Time: `active_minutes` sums gaps of at most 5 minutes between consecutive log events (agent working time, not human attention). `daily[].projects` and `projects[].minutes` are wall-clock per project (concurrent sessions in one project count once); different projects can overlap in time. `git_estimate_minutes`: commit clusters (gaps under 45 minutes) count span plus 15 minutes, an estimate. Table `activity_days(date, project, tool ∈ claude|codex|agent|git, minutes, sessions, commits)`.
+
+Mistake signals (`mistakes[]`, `{id, severity, kind, project, title, detail, suggestion, evidence[]}`): `session_error_rate` (>= 10 tool calls and >= 30% errors; critical at >= 60% over >= 30 calls), `repeated_failures` (>= 3 identical failing calls in a row; critical at 6), `reverts` (critical at 3), `rework_after_feature` (>= 2 fix commits within 2 h of a feature commit in a day), `long_session_no_commit` (>= 90 active min, no commit in the session), `stale_dirty_tree` (> 3 d; warn at 7), `file_thrash` (>= 3 sessions in a day, each >= 10 files), `ci_failing_after_work` (critical), `unpushed_work` (>= 3 commits ahead for > 1 day). A new critical signal creates one inbox item (kind `agent`) per signal per ISO week.
+
+Correlations (`correlations[]`, pairs, `Scratch`/`Home`/`Unknown` excluded): `score = 0.30*days_shared (Jaccard) + 0.20*min(1, hours_overlap/8) + 0.25*min(1, handoffs/6) + 0.15*min(1, same_session/2) + 0.10*min(1, shared_ci_failures/2)`; kept at score >= 0.15 and >= 2 evidence points. Handoff: one project's activity block ends and the other's starts within 30 minutes.
+
+Suggestions are advice only and never change tasks: unlogged work (saved project, >= 60 agent min or >= 2 commits in 7 days, no task updated), projects that move together (score >= 0.5), no activity for >= 5 days with a deadline within 7 days (`goals.deadlines`), and sessions over 3 h.
+
+Integration: `GET /api/insights` adds `activity_<kind>` findings (evidence `{type:'project', id:<name>}`) and `project_unlogged_work` when the last scan is under 30 minutes old; `insights.run` adds a compact `activity` block to the AI brief; daily/weekly reports gain an `## Activity` section when the observer is on and the window has data.
+
+Codex schema assumptions: tool calls come from `event_msg/item_completed` items `CommandExecution` (error = `status:"failed"` and exit code not 130/143), `FileChange` (files = number of `changes` keys, error = failed status) and `McpToolCall` (failed status or `result.isError`); turns from `UserMessage` items (older `event_msg/user_message`); older rollouts without item events fall back to counting `response_item` `function_call`/`custom_tool_call` (errors 0). Sub-agent rollouts (`session_meta.source.subagent`) count time but 0 turns. Project cwd comes from `session_meta` and `turn_context` only. Compressed `.jsonl.zst` archives are not read (counted in `coverage`).

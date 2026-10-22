@@ -11,7 +11,7 @@ THEMES={'noir','glacier','abyssal','cirrus','ember','phosphor','crimson','orchid
 DEFAULTS={'display_name':'Sanju','timezone':'Asia/Kolkata','start_view':'Today',
  'github_enabled':True,'local_index_enabled':True,'google_enabled':True,'voice_enabled':True,'agent_enabled':True,'attachments_enabled':True,'media_preview_enabled':True,'file_browser_enabled':True,'updates_repository':'',
  'role':'','organisation':'','location':'','website':'','bio':'','avatar_revision':'','activity_enabled':False,'theme':'noir','accent':'','density':'compact','reduce_motion':False,'auto_analysis':True,'analysis_provider':'',
- 'system_calendar_enabled':False,'calendar_autotasks':False,'calendar_notifications':True,'reminder_lead_minutes':15}
+ 'system_calendar_enabled':False,'calendar_autotasks':False,'calendar_notifications':True,'reminder_lead_minutes':15,'agent_observer_enabled':False,'agent_observer_titles':False}
 
 def get():
     path=DATA/'settings.json'

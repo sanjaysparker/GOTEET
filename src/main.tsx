@@ -2,6 +2,7 @@ import { WorkItemDetails } from './WorkItemDetails';
 import { BrowserPanel } from './BrowserPanel';
 import { Roadmap } from './roadmap/Roadmap';
 import { GoalsView } from './goals/GoalsView';
+import { ActivityView } from './activity/ActivityView';
 import { MailPanel } from './MailPanel';
 import { GoogleSetup } from './GoogleSetup';
 import React, { useEffect, useRef, useState } from 'react';
@@ -117,6 +118,7 @@ const NAV: [string, [string, any, string?][]][] = [
       ['Today', Sun, 'Home'],
       ['Inbox', InboxIcon],
       ['Insights', Bot, 'AI analyst'],
+      ['Activity', Activity, 'Activity'],
     ],
   ],
   [
@@ -327,6 +329,8 @@ function App() {
     [analysing, setAnalysing] = useState(false),
     [palette, setPalette] = useState(false),
     [focusTask, setFocusTask] = useState(''),
+    [activity, setActivity] = useState<Row | null>(null),
+    [activityBusy, setActivityBusy] = useState(false),
     [goals, setGoals] = useState<Row[]>([]),
     [deadlines, setDeadlines] = useState<Row | null>(null),
     [sysCal, setSysCal] = useState<Row | null>(null),
@@ -364,6 +368,34 @@ function App() {
     loadAgent();
     loadSystemCalendar();
     loadGoals();
+    loadActivity();
+  }
+  function loadActivity() {
+    quiet(
+      api('/api/activity/overview?days=14').catch(() => ({ enabled: false, coverage: 'Unavailable' })),
+      setActivity,
+      null,
+    );
+  }
+  async function scanActivity() {
+    setActivityBusy(true);
+    try {
+      setActivity(await api('/api/activity/scan', {}));
+      loadAgent();
+    } catch (e) {
+      fail(e);
+    } finally {
+      setActivityBusy(false);
+    }
+  }
+  async function enableObserver(on: boolean) {
+    try {
+      setPreferences(await api('/api/settings', { ...preferences, agent_observer_enabled: on }));
+      if (on) await scanActivity();
+      else loadActivity();
+    } catch (e) {
+      fail(e);
+    }
   }
   function loadGoals() {
     quiet(api('/api/goals'), setGoals, []);
@@ -837,6 +869,7 @@ function App() {
     Docs: 'Decisions, written down.',
     Automations: 'Routine, handled.',
     Goals: 'Outcomes with deadlines.',
+    Activity: 'What is really being worked on.',
   };
   const subheading: Record<string, string> = {
     Today: 'A brief built from your work, with evidence behind every next step.',
@@ -861,6 +894,8 @@ function App() {
     Automations: 'Local rules that run after each change, with every run audited.',
     Goals:
       'Measurable goals, key results from real tasks, milestones and every deadline in one place. Progress is computed, not typed.',
+    Activity:
+      'Claude, Codex and git work observed on this Mac: time per project, mistakes, and how projects connect. Nothing typed in.',
   };
   const providerLabel =
     provider === 'ollama'
@@ -928,6 +963,16 @@ function App() {
       label: 'New concept',
       icon: <Lightbulb size={15} />,
       run: () => openEditor('concept'),
+    },
+    {
+      id: 'ai-activity',
+      group: 'Agent',
+      label: 'Scan agent activity now',
+      icon: <Activity size={15} />,
+      run: () => {
+        setRoute('Activity');
+        scanActivity();
+      },
     },
     {
       id: 'ai-run',
@@ -1803,6 +1848,24 @@ function App() {
               notify={setNotice}
             />
           )}
+          {route === 'Activity' && (
+            <ActivityView
+              data={activity}
+              busy={activityBusy}
+              owner={owner}
+              scan={scanActivity}
+              enable={enableObserver}
+              reload={loadActivity}
+              createTask={(seed) => openEditor('task', { status: 'Todo', priority: 'Normal', ...seed })}
+              openProject={(name) => {
+                const pr = projects.find((x) => x.name === name);
+                if (pr) setProjectFocus(pr);
+                setRoute('Projects');
+              }}
+              fail={fail}
+              notify={setNotice}
+            />
+          )}
           {route === 'Goals' && (
             <GoalsView
               goals={goals}
@@ -2192,6 +2255,16 @@ function App() {
                       'calendar_autotasks',
                       'Create tasks from calendar items',
                       'Create and update tasks for upcoming events and reminders. Moves you make in GOTEET are never overwritten; conflicts go to Inbox.',
+                    ],
+                    [
+                      'agent_observer_enabled',
+                      'Observe agent and project activity',
+                      'Read local Claude Code and Codex session logs, running agents and git history to estimate time, spot rework and link projects. Only counts and project names are kept, never prompts, commands or file names.',
+                    ],
+                    [
+                      'agent_observer_titles',
+                      'Keep short session titles',
+                      'Also keep a redacted 100-character title per session. Off by default.',
                     ],
                     [
                       'calendar_notifications',
