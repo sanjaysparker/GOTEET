@@ -89,6 +89,16 @@ def analyse(snap=None,clock=None):
         if state in ('Off track','At risk') and p.get('status') not in ('Done','Paused'):
             add('critical' if state=='Off track' else 'warn','project_health',f"{p['name']} {state.lower()}",f"{done}/{len(own)} tasks done{f', {round(elapsed*100)}% of schedule elapsed' if elapsed is not None else ''}, target {p.get('target_date') or 'not set'}",[_ref('project',p,p['name'])],'Cut scope or move the target date deliberately.')
         if p.get('status') in ('Active','Planned') and not (start and target):add('info','undated',f"{p['name']} has no schedule",'Timeline shows it as unscheduled.',[_ref('project',p,p['name'])],'Set start and target dates.')
+    # GOALS: health comes from goals.py so findings and the Goals view always agree
+    import goals as goals_
+    goal_list=goals_.goals(today)
+    for g in goal_list:
+        ref=[{'type':'goal','id':g['id'],'label':g['title']}]
+        if g['status']=='Active' and g['health'] in ('Off track','At risk'):
+            add('critical' if g['health']=='Off track' else 'warn','goal_health',f"Goal {g['health'].lower()}: {g['title']}",f"{round(g['progress']*100)}% complete"+(f", {round(g['elapsed']*100)}% of schedule elapsed" if g['elapsed'] is not None else '')+f", target {g['target_date'] or 'not set'}",ref,'Cut scope, add the missing key results or move the target date deliberately.')
+        if g['status']=='Active' and g['days_left'] is not None and 0<=g['days_left']<=7 and g['progress']<0.7:
+            add('warn','goal_deadline',f"Goal due in {g['days_left']} d at {round(g['progress']*100)}%: {g['title']}",f"Target {g['target_date']}",ref,'Focus the remaining key results or renegotiate the date.')
+    for m in goals_.open_milestones_overdue(today):add('warn','milestone_overdue',f"Milestone overdue {(today-dt.date.fromisoformat(m['due'])).days} d: {m['title']}",f"Due {m['due']}",[{'type':'milestone','id':m['id'],'label':m['title']}],'Mark it done or set a realistic date.')
     # CI: latest sampled default-branch run per repository
     for r in repos:
         run=(r.get('runs') or [{}])[0]
@@ -108,7 +118,7 @@ def analyse(snap=None,clock=None):
       {'name':'Google','mode':'snapshot','captured_at':workspace.get('captured_at','')}]
     return {'generated_at':now(),'today':today.isoformat(),'score':score,'counts':counts,'findings':findings[:60],'projects':health,
       'workload':sorted(({'owner':o,'open':len(v),'blocked':sum(t.get('status')=='Blocked' for t in v)} for o,v in load.items()),key=lambda x:-x['open']),
-      'totals':{'open':len(open_tasks),'done':sum(t.get('status')=='Done' for t in tasks),'blocked':sum(t.get('status')=='Blocked' for t in tasks),'projects':len(projects)},
+      'totals':{'open':len(open_tasks),'done':sum(t.get('status')=='Done' for t in tasks),'blocked':sum(t.get('status')=='Blocked' for t in tasks),'projects':len(projects)},'goals':[{'id':g['id'],'title':g['title'],'progress':g['progress'],'health':g['health']} for g in goal_list],
       'sources':sources,'method':'Deterministic rules over saved tasks/projects and captured GitHub/Google snapshots. Not a performance judgement.'}
 
 def _store():

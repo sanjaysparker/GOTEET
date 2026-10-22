@@ -69,6 +69,8 @@ def migrate(c):
         c.execute('UPDATE tasks SET key=? WHERE id=?',(next_key(c,r['project']),r['id']))
     import work
     work.migrate(c)
+    import goals
+    goals.migrate(c)
     c.commit()
 
 def key_prefix(c,project):

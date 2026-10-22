@@ -39,6 +39,11 @@ def workmate_save_project(name:str|None=None,description:str|None=None,status:Li
     return call('POST','/api/projects',supplied(name=name,description=description,status=status,start_date=start_date,target_date=target_date,id=id or None))
 
 @mcp.tool()
+def goteet_goals()->list:
+    """List goals with key results, milestones, progress and health (On track, At risk, Off track, Achieved, No plan)."""
+    return call('GET','/api/goals')
+
+@mcp.tool()
 def workmate_concepts()->list:
     """Read ideas and concepts from the app."""
     return call('GET','/api/concepts')

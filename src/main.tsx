@@ -1,6 +1,7 @@
 import { WorkItemDetails } from './WorkItemDetails';
 import { BrowserPanel } from './BrowserPanel';
 import { Roadmap } from './roadmap/Roadmap';
+import { GoalsView } from './goals/GoalsView';
 import { MailPanel } from './MailPanel';
 import { GoogleSetup } from './GoogleSetup';
 import React, { useEffect, useRef, useState } from 'react';
@@ -45,6 +46,7 @@ import {
   Mail,
   Cpu,
   Bell,
+  Target,
   Command as CommandIcon,
   MessageSquarePlus,
 } from 'lucide-react';
@@ -122,6 +124,7 @@ const NAV: [string, [string, any, string?][]][] = [
     [
       ['Tasks', ListTodo, 'Issues'],
       ['Cycles', RotateCcw],
+      ['Goals', Target],
       ['Projects', Folder],
       ['Timeline', CalendarDays, 'Roadmap'],
       ['Docs', BookOpen],
@@ -159,6 +162,7 @@ const routes = [
   ['Inbox', InboxIcon],
   ['Insights', Bot],
   ['Cycles', RotateCcw],
+  ['Goals', Target],
   ['Docs', BookOpen],
   ['Automations', Zap],
   ['Today', Sun],
@@ -323,6 +327,8 @@ function App() {
     [analysing, setAnalysing] = useState(false),
     [palette, setPalette] = useState(false),
     [focusTask, setFocusTask] = useState(''),
+    [goals, setGoals] = useState<Row[]>([]),
+    [deadlines, setDeadlines] = useState<Row | null>(null),
     [sysCal, setSysCal] = useState<Row | null>(null),
     [calBusy, setCalBusy] = useState(false);
   const recorder = useRef<MediaRecorder | null>(null),
@@ -357,6 +363,11 @@ function App() {
     quiet(api('/api/automations'), setRules, []);
     loadAgent();
     loadSystemCalendar();
+    loadGoals();
+  }
+  function loadGoals() {
+    quiet(api('/api/goals'), setGoals, []);
+    quiet(api('/api/deadlines'), setDeadlines, null);
   }
   // SYSTEM CALENDAR IS OPT-IN: the endpoint refuses (403) until the Permissions switch is on, so the probe is silent.
   function loadSystemCalendar() {
@@ -825,6 +836,7 @@ function App() {
     Cycles: 'Work in rhythm.',
     Docs: 'Decisions, written down.',
     Automations: 'Routine, handled.',
+    Goals: 'Outcomes with deadlines.',
   };
   const subheading: Record<string, string> = {
     Today: 'A brief built from your work, with evidence behind every next step.',
@@ -847,6 +859,8 @@ function App() {
     Cycles: 'Time-boxed cycles with scope and burn-up measured from saved tasks.',
     Docs: 'Markdown pages linked to projects and tasks.',
     Automations: 'Local rules that run after each change, with every run audited.',
+    Goals:
+      'Measurable goals, key results from real tasks, milestones and every deadline in one place. Progress is computed, not typed.',
   };
   const providerLabel =
     provider === 'ollama'
@@ -907,6 +921,7 @@ function App() {
       icon: <Folder size={15} />,
       run: () => openEditor('project'),
     },
+    { id: 'new-goal', group: 'Create', label: 'New goal', icon: <Target size={15} />, run: go('Goals') },
     {
       id: 'new-concept',
       group: 'Create',
@@ -1788,6 +1803,27 @@ function App() {
               notify={setNotice}
             />
           )}
+          {route === 'Goals' && (
+            <GoalsView
+              goals={goals}
+              deadlines={deadlines}
+              projects={projects}
+              owner={owner}
+              reload={() => {
+                loadGoals();
+                loadAgent();
+              }}
+              openTask={openTask}
+              openProject={(id) => analyst.openProject(id)}
+              askAgent={(q) => {
+                setInspector(true);
+                setQuestion(q);
+                setMode('ask');
+              }}
+              fail={fail}
+              notify={setNotice}
+            />
+          )}
           {route === 'Docs' && (
             <DocsView
               docs={docs}
@@ -2284,6 +2320,7 @@ function App() {
               }}
               fail={fail}
               calendar={sysCal}
+              goals={goals}
               syncCalendar={calBusy ? undefined : syncCalendar}
             />
           )}

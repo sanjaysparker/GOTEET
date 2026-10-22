@@ -8,6 +8,7 @@ import {
   GripVertical,
   Plus,
   RefreshCw,
+  Target,
 } from 'lucide-react';
 import { type Row } from '../lib/api';
 import { Avatar, Key, Meter, PriorityIcon, StatusIcon } from '../work/bits';
@@ -68,6 +69,7 @@ export function Roadmap({
   createProject,
   fail,
   calendar,
+  goals,
   syncCalendar,
 }: {
   projects: Row[];
@@ -83,6 +85,7 @@ export function Roadmap({
   createProject: () => void;
   fail: (e: unknown) => void;
   calendar: Row | null;
+  goals: Row[];
   syncCalendar?: () => void;
 }) {
   const [zoom, setZoom] = useState<Zoom>(() => (localStorage.getItem('gt.zoom') as Zoom) || 'week');
@@ -111,6 +114,9 @@ export function Roadmap({
   const calEvents: Row[] = (calendar?.events || [])
     .filter((e: Row) => e.start && e.start.slice(0, 10) >= ISO(start - 1) && e.start.slice(0, 10) <= ISO(end))
     .slice(0, 40);
+  const roadGoals: Row[] = (goals || []).filter(
+    (g) => g.status === 'Active' && (g.start_date || g.target_date),
+  );
   const insightFor = (id: string) => insights?.projects?.find((p: Row) => p.id === id);
   const shownProjects = projects.filter((p) => project === 'all' || p.id === project);
   const span = (s?: string, e?: string): [number, number] | null => {
@@ -362,6 +368,22 @@ export function Roadmap({
         <div className="rm-grid" ref={area}>
           <div className="rm-left">
             <div className="rm-head rm-head-left">Work</div>
+            {roadGoals.length > 0 && (
+              <>
+                <div className="rm-group static rm-goal-head">
+                  <Target size={13} />
+                  <span className="grow">Goals</span>
+                  <span className="num faint">{roadGoals.length}</span>
+                </div>
+                {roadGoals.map((g) => (
+                  <div key={g.id} className="rm-row-label rm-goal-row" title={g.title}>
+                    <span className="rm-goal-dot" style={{ background: HEALTH_TONE[g.health] }} />
+                    <span className="grow rm-title">{g.title}</span>
+                    <span className="num faint">{Math.round(g.progress * 100)}%</span>
+                  </div>
+                ))}
+              </>
+            )}
             {calEvents.length > 0 && (
               <>
                 <div className="rm-group static rm-cal-head">
@@ -486,6 +508,65 @@ export function Roadmap({
                   />
                 ))}
                 <div className="rm-now" style={{ left: x(today) + Z.dayW / 2 }} aria-hidden="true" />
+                {roadGoals.length > 0 && (
+                  <>
+                    <div className="rm-lane project" />
+                    {roadGoals.map((g) => {
+                      const sp = span(g.start_date || g.target_date, g.target_date || g.start_date);
+                      if (!sp) return <div key={g.id} className="rm-lane rm-goal-lane" />;
+                      return (
+                        <div key={g.id} className="rm-lane rm-goal-lane">
+                          <div
+                            className="rm-goal-bar"
+                            style={{
+                              left: x(sp[0]),
+                              width: Math.max(Z.dayW, (sp[1] - sp[0] + 1) * Z.dayW),
+                              ['--tone' as string]: HEALTH_TONE[g.health],
+                            }}
+                            title={`${g.title} · ${Math.round(g.progress * 100)}% · ${g.health}`}
+                          >
+                            <span className="rm-goal-fill" style={{ width: g.progress * 100 + '%' }} />
+                            <span className="rm-bar-label">{g.title}</span>
+                          </div>
+                          {g.milestones.map((m: Row) => (
+                            <span
+                              key={m.id}
+                              className={'rm-milestone rm-ms ' + (m.done ? 'done' : '')}
+                              style={{ left: x(NUM(m.due)) + Z.dayW / 2 - 6 }}
+                              title={`${m.title} · ${m.due}`}
+                            >
+                              <Diamond size={12} />
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+                {calEvents.length > 0 && (
+                  <>
+                    <div className="rm-lane project" />
+                    {calEvents.map((ev) => {
+                      const sp = span(ev.start.slice(0, 10), (ev.end || ev.start).slice(0, 10));
+                      return (
+                        <div key={ev.uid} className="rm-lane rm-cal-lane">
+                          {sp && (
+                            <div
+                              className="rm-cal-bar"
+                              style={{
+                                left: x(sp[0]),
+                                width: Math.max(Z.dayW, (sp[1] - sp[0] + 1) * Z.dayW),
+                              }}
+                              title={`${ev.title} · ${ev.calendar || ''}`}
+                            >
+                              {ev.title}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
                 {groups.map(({ p, own }) => {
                   const sp = span(p.start_date, p.target_date);
                   return (
@@ -542,30 +623,6 @@ export function Roadmap({
                     </React.Fragment>
                   );
                 })}
-                {calEvents.length > 0 && (
-                  <>
-                    <div className="rm-lane project" />
-                    {calEvents.map((ev) => {
-                      const sp = span(ev.start.slice(0, 10), (ev.end || ev.start).slice(0, 10));
-                      return (
-                        <div key={ev.uid} className="rm-lane rm-cal-lane">
-                          {sp && (
-                            <div
-                              className="rm-cal-bar"
-                              style={{
-                                left: x(sp[0]),
-                                width: Math.max(Z.dayW, (sp[1] - sp[0] + 1) * Z.dayW),
-                              }}
-                              title={`${ev.title} · ${ev.calendar || ''}`}
-                            >
-                              {ev.title}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
                 {ungrouped.length > 0 && <div className="rm-lane project" />}
                 {ungrouped.map((t) => {
                   const tsp = span(t.start_date || t.due, t.due);

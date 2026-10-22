@@ -57,7 +57,7 @@ The desktop manages its backend lifetime. User state defaults to the OS app-data
 
 ## Live Claude/Codex access
 
-The bundled MCP server is registered with the local Codex CLI. Project-scoped `.mcp.json` provides the same server to Claude Code, which currently requires its normal approval. Existing unrelated servers were preserved. The 19 tools cover workspace data, media, files, system health, agent inventory and reviewed plans. Sending a message requires an explicit human instruction. See AGENT_ACCESS.md for the portable installed CLI, MCP and optional loopback CDP mode.
+The bundled MCP server is registered with the local Codex CLI. Project-scoped `.mcp.json` provides the same server to Claude Code, which currently requires its normal approval. Existing unrelated servers were preserved. The 20 tools cover workspace data, media, files, system health, agent inventory and reviewed plans. Sending a message requires an explicit human instruction. See AGENT_ACCESS.md for the portable installed CLI, MCP and optional loopback CDP mode.
 
 Run `.venv312/bin/python workmate_client.py status` while the app is open. List tasks with `tasks`. Create/update a task by piping JSON to `task`; project and concept commands work similarly. These clients call the live API rather than directly editing the database. Example payload:
 

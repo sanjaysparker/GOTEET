@@ -59,7 +59,7 @@ TOKEN=os.environ.get('WORKMATE_API_TOKEN') or secrets.token_urlsafe(48)
 INSTANCE=str(uuid.uuid4())
 BASE_URL=''
 SYNC_LOCK=threading.Lock()
-ITEM_ROUTES=('/api/tasks','/api/projects','/api/concepts','/api/relations','/api/cycles','/api/docs','/api/views','/api/automations')
+ITEM_ROUTES=('/api/tasks','/api/projects','/api/concepts','/api/relations','/api/cycles','/api/docs','/api/views','/api/automations','/api/goals','/api/key-results','/api/milestones')
 VOICE_LOCK=threading.Lock()
 WHISPER=None
 
@@ -81,7 +81,7 @@ async def authenticate(request:Request,call_next):
         from fastapi.responses import JSONResponse
         return JSONResponse({'detail':'GOTEET local API token required'},status_code=401)
     shared={'/api/snapshot','/api/tasks','/api/concepts','/api/projects','/api/chat','/api/team','/api/attachments','/api/attachments/upload','/api/attachments/download',
-      '/api/relations','/api/cycles','/api/docs','/api/views','/api/inbox','/api/inbox/read','/api/inbox/snooze','/api/automations'}
+      '/api/relations','/api/cycles','/api/docs','/api/views','/api/inbox','/api/inbox/read','/api/inbox/snooze','/api/automations','/api/goals','/api/key-results','/api/milestones','/api/deadlines'}
     # Item routes (/api/tasks/{id}, /api/automations/{id}/run …) follow their collection; DELETE and automation writes re-check owner in the route.
     if member and request.url.path not in shared and not any(request.url.path.startswith(x+'/') for x in ITEM_ROUTES):
         from fastapi.responses import JSONResponse
@@ -590,6 +590,48 @@ def run_automation(automation_id:str):return work.dry_run(automation_id)
 @app.delete('/api/automations/{automation_id}')
 def delete_automation(automation_id:str,request:Request):
     owner_only(request);result=work.delete('automations',automation_id);audit('automation:delete:'+automation_id,actor(request));return result
+
+# GOALS, KEY RESULTS, MILESTONES AND DEADLINES (docs/API_V1.md); reads are open to members, writes are owner only
+
+@app.get('/api/goals')
+def goals_list():
+    import goals
+    return goals.goals()
+
+@app.post('/api/goals')
+def save_goal(value:dict,request:Request):
+    import goals
+    owner_only(request);record=goals.save_goal(value,actor(request));audit('goal:'+record['id'],actor(request));return record
+
+@app.delete('/api/goals/{goal_id}')
+def delete_goal(goal_id:str,request:Request):
+    import goals
+    owner_only(request);result=goals.delete_goal(goal_id,actor(request));audit('goal:delete:'+goal_id,actor(request));return result
+
+@app.post('/api/key-results')
+def save_key_result(value:dict,request:Request):
+    import goals
+    owner_only(request);record=goals.save_key_result(value);audit('key-result:'+record['id'],actor(request));return record
+
+@app.delete('/api/key-results/{kr_id}')
+def delete_key_result(kr_id:str,request:Request):
+    import goals
+    owner_only(request);result=goals.delete_row('key_results',kr_id,'Key result');audit('key-result:delete:'+kr_id,actor(request));return result
+
+@app.post('/api/milestones')
+def save_milestone(value:dict,request:Request):
+    import goals
+    owner_only(request);record=goals.save_milestone(value,actor(request));audit('milestone:'+record['id'],actor(request));return record
+
+@app.delete('/api/milestones/{milestone_id}')
+def delete_milestone(milestone_id:str,request:Request):
+    import goals
+    owner_only(request);result=goals.delete_row('milestones',milestone_id,'Milestone');audit('milestone:delete:'+milestone_id,actor(request));return result
+
+@app.get('/api/deadlines')
+def deadlines():
+    import goals
+    return goals.deadlines()
 
 # SYSTEM CALENDAR AND REMINDERS (owner only: not in the member allowlist)
 

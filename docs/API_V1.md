@@ -11,6 +11,8 @@ Implementation: `work.py` (domain), routes in `api.py`, schema migrations in `en
 | Route group | Owner | Member |
 |---|---|---|
 | GET/POST tasks, projects, concepts, relations, cycles, docs, views, inbox | yes | yes |
+| `GET /api/goals`, `/api/deadlines` | yes | yes |
+| `POST`/`DELETE` goals, key results, milestones | yes | 403 |
 | `DELETE` on any resource | yes | 403 |
 | `POST /api/automations`, `/toggle`, `DELETE` | yes | 403 |
 | `GET /api/automations`, `POST /api/automations/{id}/run` (dry run) | yes | yes |
@@ -129,6 +131,38 @@ Execution rules: runs happen synchronously inside the task save; each run increm
 - `GET /api/insights` → deterministic findings (`insights.analyse()`).
 - `GET /api/insights/history` → past AI analyses.
 - `POST /api/insights/run` `{provider, model, focus}` → requires `agent_enabled`; returns `{analysis, plan, insights}`; missing provider CLI or timeout → 400 with a clear message.
+
+## Goals
+
+Implementation: `goals.py`. Tables `goals`, `key_results`, `milestones` are created by additive migration. Reads (`GET`) are open to members; every `POST` and `DELETE` is owner only (403 for members). All writes merge on `id` and write an audit row (`goal:<id>`, `key-result:<id>`, `milestone:<id>`, `…:delete:<id>`).
+
+`GET /api/goals` → Active goals first by `target_date` ascending (empty last), then Achieved, Paused, Dropped:
+
+```
+[{id, title, description, owner, status:'Active'|'Achieved'|'Paused'|'Dropped', start_date, target_date, project_id,
+  progress:0..1, health:'On track'|'At risk'|'Off track'|'Achieved'|'No plan', elapsed:0..1|null, days_left:int|null,
+  key_results:[{id, goal_id, title, kind:'tasks'|'manual', project_name, target, current, unit, due, progress:0..1, detail}],
+  milestones:[{id, goal_id, project_id, title, due, done:boolean}], created_at, updated_at}]
+```
+
+- `POST /api/goals` `{id?, title (1-300), description?, owner?, status? (default Active), start_date?, target_date?, project_id?}`; dates `YYYY-MM-DD`, `target_date >= start_date`; unknown `project_id` 404. Setting status to `Achieved` raises an inbox item (`status`, "Goal achieved: <title>") once per transition.
+- `DELETE /api/goals/{id}` → `{deleted, key_results_removed, milestones_removed}`; removes its key results and milestones.
+- `POST /api/key-results` `{id?, goal_id, title, kind, project_name?, target?, current?, unit?, due?}`; unknown goal 404; `tasks` needs `project_name`; `manual` needs `target > 0`; numbers must be real JSON numbers. `DELETE /api/key-results/{id}`.
+- `POST /api/milestones` `{id?, goal_id?, project_id?, title, due, done?}`; `due` required; `goal_id`/`project_id`, if non-empty, must exist (404). Changing `done` writes `milestone:done:<id>` or `milestone:reopen:<id>`. `DELETE /api/milestones/{id}`.
+
+Progress (deterministic, recomputed on every read, today = Asia/Kolkata date):
+
+| Item | Rule |
+|---|---|
+| KR `tasks` | done/total of tasks whose `project == project_name`; detail `3/8 tasks`; no tasks → progress 0, detail `No tasks yet` |
+| KR `manual` | `clamp(current/target, 0, 1)`; detail `45 / 100 %` (unit appended when set) |
+| Goal | mean of its KR progress; with no KRs, done/total milestones; with neither, 0 |
+| `elapsed` | `clamp((today-start)/(target-start))` when both dates set (zero-length span: 1 on/after target, else 0); otherwise `null` |
+| Health | `Achieved` if status Achieved or progress >= 1; else `No plan` if no KRs and no milestones; else `Off track` if target < today (progress < 1) or `elapsed - progress > 0.30`; else `At risk` if `elapsed - progress > 0.12`; else `On track` |
+
+`GET /api/deadlines` → `{overdue:[…], this_week:[…], later:[…]}`, each item `{type:'task'|'milestone'|'goal'|'project'|'kr', id ('<type>:<ref_id>'), title, due, days (from today, negative = overdue), status, ref_id, goal_id, project}`. `this_week` = 0..7 days, `later` > 7. Nearest first, capped at 60 items in total. Sources: open tasks with a due date; undone milestones; Active goals' `target_date`; projects' `target_date` unless Done; key-result `due` while progress < 1.
+
+Insights (`GET /api/insights`) adds `goal_health` (Off track critical, At risk warn; Active goals), `goal_deadline` (Active goal due within 7 days at progress < 0.7, warn), `milestone_overdue` (undone milestone past due, warn), and a top-level `goals:[{id, title, progress, health}]`. MCP: `goteet_goals` (read).
 
 ## Other changes in this version
 

@@ -21,7 +21,7 @@ goteet models
 
 The `goteet` stdio server is registered with the local Codex CLI. Claude Code uses the project `.mcp.json` and currently reports its normal MCP approval as pending. New sessions may require their normal MCP trust/reload step. Existing unrelated MCP servers were preserved.
 
-19 tools cover status, tasks, projects, concepts, channels, reports, media search, UI control model status, file browsing, system health, agent inventory and reviewed plans. `goteet_control_ui` supports `navigate`, `search`, `open_media`, `close_media`, and `draft_assistant`. Shared messages still require an explicit human request.
+20 tools cover status, tasks, projects, concepts, channels, reports, media search, UI control model status, file browsing, system health, agent inventory and reviewed plans. `goteet_control_ui` supports `navigate`, `search`, `open_media`, `close_media`, and `draft_assistant`. Shared messages still require an explicit human request.
 
 ## CDP
 
