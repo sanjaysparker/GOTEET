@@ -1,0 +1,58 @@
+name: Build Intel Mac DMG
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: macos-intel-release
+  cancel-in-progress: false
+jobs:
+  intel:
+    runs-on: macos-15-intel
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+          cache: pip
+          cache-dependency-path: requirements-macos-x64-lock.txt
+      - name: Install Intel dependencies
+        run: |
+          python -c "import platform; assert platform.machine() == 'x86_64'"
+          python -m pip install --only-binary :all: -r requirements-macos-x64-lock.txt
+          npm ci
+      - name: Test and build
+        run: |
+          python -m pytest test_cloud_auth.py test_report_scheduler.py -q
+          npm run build
+          GOTEET_PAYLOAD_DIR=build/intel/payload GOTEET_BUILD_DIR=build/intel python scripts/package_backend.py
+          npm run package:mac:intel
+      - name: Verify packaged backend and architecture
+        run: |
+          python scripts/verify_intel_package.py release/intel/mac/GOTEET.app
+          hdiutil verify release/intel/*.dmg
+          cd release/intel
+          shasum -a 256 *.dmg > GOTEET-mac-x64-SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GOTEET-Intel-Mac
+          path: |
+            release/intel/*.dmg
+            release/intel/*SHA256.txt
+          retention-days: 7
+      - name: Publish verified DMG
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p 'require("./package.json").version')
+          TAG="v${VERSION}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --prerelease --title "GOTEET ${VERSION}" --notes-file docs/INTEL_RELEASE.md
+          fi
+          gh release upload "$TAG" release/intel/*.dmg release/intel/*SHA256.txt --clobber

@@ -25,7 +25,7 @@ flowchart LR
 Google sign-in requests identity and read-only Drive access. After granted consent, Drive metadata imports automatically; other Google sources remain optional. Google may require administrator approval or show testing-mode notices.
 
 
-An integrated desktop work assistant following the requested spark-aigis-maker architecture: Electron + React/Vite + FastAPI, with SQLite. First packaging target is macOS arm64. Windows and Linux targets are defined but must be built and tested on those systems.
+An integrated desktop work assistant following the requested spark-aigis-maker architecture: Electron + React/Vite + FastAPI, with SQLite. macOS packages target Apple Silicon (arm64) and Intel (x64). Windows and Linux targets are defined but must be built and tested on those systems.
 
 ## Included
 
@@ -41,7 +41,7 @@ An integrated desktop work assistant following the requested spark-aigis-maker a
 - Measured resource gauges, top memory users and bounded storage review with AI explanations.
 - About-only SPARKER credit and public GitHub release checking.
 - Daily/weekly report history and export.
-- Google Desktop OAuth with PKCE/state and OS credential storage. Import your own Desktop OAuth client JSON in Connections. Basic Google sign-in and optional read-only Gmail, Drive, Calendar, Contacts and Google Tasks access are separate choices. Enable those APIs and configure your consent audience/test users in the Google project. Use **Connect selected Google data** to open the system browser account chooser and consent screen. After consenting, return to Connections, check sign-in status and import selected data. Optional **Use Google name & photo** updates the local profile. Imports are bounded, show per-source capture times, and preserve older data on partial failure. Do not paste credentials in chat.
+- Google Desktop OAuth with PKCE/state and OS credential storage. Import your own Desktop OAuth client JSON in Connections. Basic Google sign-in and optional read-only Gmail, Drive, Calendar, Contacts and Google Tasks access are separate choices. Enable those APIs and configure your consent audience/test users in the Google project. Use **Connect selected Google data** to open the system browser account chooser and consent screen. After consenting, Connections refreshes the account status automatically. Optional **Use Google name & photo** updates the local profile. Imports are bounded, show per-source capture times, and preserve older data on partial failure. Do not paste credentials in chat.
 - Read-only Codex assistant using existing ChatGPT CLI login, plus local Ollama models.
 - Microphone recording, local faster-whisper transcription and local system voice playback.
 
@@ -77,7 +77,7 @@ For server deployment, `WORKMATE_LISTEN_HOST` and `WORKMATE_PORT` choose the lis
 
 ## Reports
 
-Daily and Friday weekly report automations are attached to the originating Codex chat. They depend on the local scheduler environment being available. They are not an always-on hosted reporting service. App reports show source capture times and stale/missing coverage. Historical comparison becomes more useful as successive snapshots accumulate.
+GOTEET owns its daily (09:00 IST), Friday weekly (18:00 IST), and 12-hour local analysis schedules. They run while GOTEET is open and catch up the latest missed slot on launch. No Codex/ChatGPT scheduled task is required. Scheduled analysis uses local evidence rules; it does not launch other agents. This is not an always-on hosted reporting service. App reports show source capture times and stale/missing coverage. Historical comparison becomes more useful as successive snapshots accumulate.
 
 See OPEN_SOURCE_REVIEW.md for the repository comparison and source/coverage limitations. See VERIFICATION.md for measured build and integration evidence.
 
@@ -116,3 +116,21 @@ v0.5.1 includes the calendar/board planner, formatted reports, task completion c
 ## Source licenses
 
 The distribution includes an AGPL-3.0 Plane date helper; see `src/vendor/plane-dates.ts`, `public/licenses/plane-AGPL-3.0.txt` and `READER_REFERENCES.md`. Preserve its attribution and comply with the applicable source-distribution terms when redistributing the combined app. PDF.js license is also included in `public/licenses/`.
+
+## Intel Mac DMG
+
+Intel Macs use the `mac-x64.dmg` release asset; Apple Silicon Macs use `mac-arm64` builds. Drag GOTEET into Applications. Python, Node, Supabase CLI and developer tools are bundled or unnecessary for end users. Google accounts and workspace membership are configured inside the app.
+
+Build on an Intel Mac or on Apple Silicon with Rosetta installed:
+
+```sh
+uv python install cpython-3.12-macos-x86_64
+uv venv --python cpython-3.12-macos-x86_64 .venv312-x64
+uv pip install --only-binary :all: --python .venv312-x64/bin/python -r requirements-macos-x64-lock.txt
+npm ci
+npm run build
+GOTEET_PAYLOAD_DIR=build/intel/payload GOTEET_BUILD_DIR=build/intel .venv312-x64/bin/python scripts/package_backend.py
+npm run package:mac:intel
+```
+
+Intel dependencies pin ONNX Runtime 1.23.2 and cryptography 48.0.1 because newer releases lack Intel macOS wheels. The payload is isolated from the arm64 build. Current packages are unsigned and not notarized; macOS may require approval in Privacy & Security.

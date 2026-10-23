@@ -37,6 +37,7 @@ from fastapi.responses import Response
 import uvicorn
 import engine
 import google_auth
+import cloud_auth
 import agent
 import operations
 import system_info
@@ -54,7 +55,7 @@ import logging
 import time
 from collector import DATA, STATE, now
 
-app=FastAPI(title='GOTEET local API',version='0.5.4')
+app=FastAPI(title='GOTEET local API',version='0.5.6')
 TOKEN=os.environ.get('WORKMATE_API_TOKEN') or secrets.token_urlsafe(48)
 INSTANCE=str(uuid.uuid4())
 BASE_URL=''
@@ -65,7 +66,7 @@ WHISPER=None
 
 @app.middleware('http')
 async def authenticate(request:Request,call_next):
-    public=request.url.path in {'/api/health','/api/google/callback'}
+    public=request.url.path in {'/api/health','/api/google/callback','/api/cloud/callback'}
     supplied=request.headers.get('authorization','').removeprefix('Bearer ')
     owner=secrets.compare_digest(supplied,TOKEN)
     member=None
@@ -116,7 +117,7 @@ def owner_only(request:Request):
     if request.state.identity['role']!='owner':raise PermissionError('Only the workspace owner can do this')
 
 @app.get('/api/health')
-def health():return {'ok':True,'version':'0.5.4','instance':INSTANCE,'pid':os.getpid()}
+def health():return {'ok':True,'version':'0.5.6','instance':INSTANCE,'pid':os.getpid()}
 
 @app.get('/api/snapshot')
 def snapshot(request:Request):
@@ -735,6 +736,16 @@ def start_observer_background():
 def start_calendar_background():
     threading.Thread(target=_calendar_loop,name='calendar-sync',daemon=True).start()
 
+@app.on_event('startup')
+def start_report_schedule():
+    import report_scheduler
+    report_scheduler.start()
+
+@app.get('/api/scheduler')
+def report_schedule_status():
+    import report_scheduler
+    return report_scheduler.status()
+
 def main():
     global BASE_URL
     DATA.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -798,5 +809,29 @@ def activity_sample(value:dict):
 def activity_clear():
     import activity_monitor
     return activity_monitor.clear()
+
+
+@app.get('/api/cloud/status')
+def cloud_status():return cloud_auth.status()
+
+@app.post('/api/cloud/start')
+def cloud_start():return cloud_auth.start(BASE_URL+'/api/cloud/callback')
+
+@app.post('/api/cloud/logout')
+def cloud_logout():return cloud_auth.logout()
+
+@app.get('/api/cloud/workspaces')
+def cloud_workspaces():return cloud_auth.workspaces()
+
+@app.get('/api/cloud/callback',response_class=HTMLResponse)
+def cloud_callback(code:str='',state:str='',error:str=''):
+    headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'}
+    if error:
+        cloud_auth.PENDING.pop(state,None)
+        return HTMLResponse(google_auth.completion_page(cancelled=True),headers=headers)
+    try:profile=cloud_auth.finish(code,state)
+    except Exception:
+        return HTMLResponse(google_auth.completion_page(failed=True),status_code=400,headers=headers)
+    return HTMLResponse(google_auth.completion_page(profile),headers=headers)
 
 if __name__=='__main__':main()

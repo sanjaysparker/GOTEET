@@ -1,6 +1,6 @@
 {
   "name": "goteet-desktop",
-  "version": "0.5.4",
+  "version": "0.5.6",
   "private": true,
   "description": "GOTEET agentic work assistant",
   "author": "DroneOS",
@@ -13,7 +13,8 @@
     "package:win": "electron-builder --win nsis --publish never",
     "package:linux": "electron-builder --linux AppImage --publish never",
     "cleanup:mac": ".venv312/bin/python scripts/cleanup_mac_bundles.py",
-    "prebuild": "node scripts/prepare_cad.cjs"
+    "prebuild": "node scripts/prepare_cad.cjs",
+    "package:mac:intel": "electron-builder --config scripts/electron-builder-intel.json --mac dmg --x64 --publish never"
   },
   "build": {
     "appId": "in.droneos.goteet",

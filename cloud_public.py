@@ -1,0 +1,3 @@
+# Public Supabase project coordinates; no administrative credentials.
+URL = 'https://ynjspephbavvnsslscsl.supabase.co'
+PUBLISHABLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InluanNwZXBoYmF2dm5zc2xzY3NsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NTE1NjIsImV4cCI6MjEwODMyNzU2Mn0.dW5GQRVUY0n9v3husRIUCvtqZnLtIWfPbpHtaHZV2w0'

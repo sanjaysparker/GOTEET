@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { CloudAccount } from './CloudAccount';
 import { DrivePanel } from './DrivePanel';
 type Row = Record<string, any>;
 const sources = [
@@ -28,6 +29,30 @@ export function GoogleSetup({
   onMail: () => void;
 }) {
   const [waiting, setWaiting] = useState(false);
+  const [verification, setVerification] = useState('');
+  const callbacks = useRef({ request, refresh });
+  callbacks.current = { request, refresh };
+  useEffect(() => {
+    let alive = true, running = false, last = 0;
+    async function check() {
+      if (!enabled || running || Date.now() - last < 15000) return;
+      running = true; last = Date.now();
+      try {
+        await callbacks.current.refresh();
+        if (connection.connected) {
+          const result = await callbacks.current.request('/api/google/check', {});
+          if (alive) setVerification(result.verified ? 'Account verified · updates automatically' : result.message);
+        } else if (alive) setVerification('');
+      } catch {
+        if (alive) setVerification('Account refresh unavailable. Retrying automatically.');
+      } finally { running = false; }
+    }
+    void check();
+    const timer = window.setInterval(check, 30000);
+    window.addEventListener('focus', check);
+    return () => { alive = false; window.clearInterval(timer); window.removeEventListener('focus', check); };
+  }, [enabled, connection.connected, connection.profile?.email]);
+
   useEffect(() => {
     if (waiting && connection.connected) {
       setWaiting(false);
@@ -80,6 +105,7 @@ export function GoogleSetup({
             : workspace.google_tasks?.tasks || [];
   return (
     <section>
+      <CloudAccount />
       <div className="section-title">
         <h2>Google account & imports</h2>
         <span className="badge">
@@ -141,18 +167,9 @@ export function GoogleSetup({
             Log out
           </button>
         )}
-        <button
-          disabled={!!busy}
-          onClick={() =>
-            run('Checking sign-in', async () => {
-              const checked = await request('/api/google/check', {});
-              setMessage(checked.message);
-            })
-          }
-        >
-          Check sign-in status
-        </button>
+
       </div>
+      {verification && <p className="muted" role="status">{verification}</p>}
       {connection.connected && !connection.sources?.drive && (
         <button
           className="primary"

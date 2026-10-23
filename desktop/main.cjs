@@ -17,7 +17,8 @@ const execFileAsync = promisify(execFile);
 const fs = require('node:fs');
 const path = require('node:path');
 app.setName('GOTEET');
-let backend,
+let splash,
+  backend,
   windowRef,
   runtime,
   closing = false;
@@ -448,7 +449,16 @@ app.whenReady().then(async () => {
   });
   if (app.dock) app.dock.setIcon(path.join(__dirname, 'assets/icon.png'));
   try {
+    splash = new BrowserWindow({width:560,height:380,frame:false,resizable:false,
+      title:'Starting GOTEET',backgroundColor:'#0c0e17',show:false,
+      webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
+    splash.webContents.setWindowOpenHandler(() => ({action:'deny'}));
+    splash.webContents.on('will-navigate', e => e.preventDefault());
+    await splash.loadFile(path.join(__dirname,'splash.html'));
+    splash.show();
+    const splashStarted = Date.now();
     await startBackend();
+    if (!splash.isDestroyed()) await splash.webContents.executeJavaScript("document.getElementById('status').textContent='Opening your workspace…'");
     protocol.handle('goteet-media', async (request) => {
       const url = new URL(request.url);
       if (url.hostname === 'profile' && url.pathname === '/avatar')
@@ -491,6 +501,7 @@ app.whenReady().then(async () => {
       callback(granted);
     });
     windowRef = new BrowserWindow({
+      show: false,
       width: 1450,
       height: 940,
       minWidth: 980,
@@ -512,11 +523,16 @@ app.whenReady().then(async () => {
     });
     windowRef.webContents.on('will-navigate', (event) => event.preventDefault());
     await windowRef.loadFile(path.join(repo, 'dist/index.html'));
+    await delay(Math.max(0, 1400 - (Date.now() - splashStarted)));
+    windowRef.show();
+    if (splash && !splash.isDestroyed()) splash.destroy();
+    splash = null;
     if (process.env.WORKMATE_SCREENSHOT)
       await windowRef.webContents
         .capturePage()
         .then((image) => fs.writeFileSync(process.env.WORKMATE_SCREENSHOT, image.toPNG()));
   } catch (error) {
+    if (splash && !splash.isDestroyed()) splash.destroy();
     dialog.showErrorBox('GOTEET could not open', error.message);
     app.quit();
   }

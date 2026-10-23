@@ -493,23 +493,7 @@ function App() {
       stream.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
-  // AGENTIC BY DEFAULT: once per 12 h the agent analyses the workspace on its own and files a report to Inbox.
-  // It only proposes; applying stays an explicit click. Off via Settings → Preferences → Automatic analysis.
-  const autoRan = useRef(false);
-  useEffect(() => {
-    if (autoRan.current || !snap || snap.identity?.role === 'member') return;
-    if (
-      !preferences.display_name ||
-      preferences.auto_analysis === false ||
-      preferences.agent_enabled === false
-    )
-      return;
-    const last = analyses[0]?.created_at ? new Date(analyses[0].created_at).getTime() : 0;
-    if (Date.now() - last < 12 * 3600e3) return;
-    autoRan.current = true;
-    const t = setTimeout(() => runAnalysis('', true), 8000);
-    return () => clearTimeout(t);
-  }, [snap, preferences, analyses]);
+  // Automatic reports belong to the backend scheduler, independent of renderer refreshes.
   // REMINDERS BECOME OS NOTIFICATIONS ONCE: each unread inbox 'reminder' fires one notification, then is marked read.
   const notified = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -2144,16 +2128,14 @@ function App() {
                   </div>
                   <div className="permission-row">
                     <div>
-                      <strong>Automatic AI analysis</strong>
+                      <strong>Automatic reports & analysis</strong>
                       <small>
-                        Every 12 h the agent reads tasks, projects, CI and captured sources, files a report to
-                        Inbox and proposes changes. Nothing applies without your click. Uses the assistant’s
-                        selected model.
+                        GOTEET analyses saved evidence every 12 hours, reports daily at 09:00 and weekly on Friday at 18:00 IST. Results appear in Inbox and Reports. Runs while GOTEET is open; the latest missed report catches up on launch. No Codex or Claude job is started.
                       </small>
                     </div>
                     <Switch.Root
                       className="permission-switch"
-                      aria-label="Automatic AI analysis"
+                      aria-label="Automatic reports & analysis"
                       checked={preferences.auto_analysis !== false}
                       onCheckedChange={(auto_analysis) => setPreferences({ ...preferences, auto_analysis })}
                     >
