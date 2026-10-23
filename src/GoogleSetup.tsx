@@ -88,8 +88,8 @@ export function GoogleSetup({
     }
   }
   async function login(imports: boolean) {
-    const value = await request('/api/google/start', { sources: imports ? selected : ['drive'] });
-    await window.workmate.external(value.url);
+    const value = await request('/api/google/start', { sources: imports ? selected : ['gmail', 'drive', 'calendar'] });
+    await window.goteet.external(value.url);
     setWaiting(!connection.connected);
     setMessage('Google account chooser opened. Return here after consent; status refreshes automatically.');
   }
@@ -107,13 +107,13 @@ export function GoogleSetup({
     <section>
       <CloudAccount />
       <div className="section-title">
-        <h2>Google account & imports</h2>
+        <h2>Optional Google data imports</h2>
         <span className="badge">
           {connection.connected
             ? 'Signed in'
             : connection.configured
               ? 'Ready to sign in'
-              : 'Client setup required'}
+              : 'Not connected'}
         </span>
       </div>
       {connection.error && (
@@ -140,17 +140,23 @@ export function GoogleSetup({
       </p>
       <p className="muted">
         Use your Gmail or company Google Workspace account. Sign-in requests your name, email, profile photo
-        and read-only Drive access. After consent, Drive sets up automatically. Choose “Use another account”
+        and read-only Gmail, Drive and Calendar access. Granted sources import automatically after consent. Choose “Use another account”
         in Google to enter your company email.
       </p>
       <div className="button-row">
-        <button
+        {connection.configured && <button
           className="primary"
-          disabled={!!busy || !enabled || !connection.configured}
+          disabled={!!busy || !enabled}
           onClick={() => run('Opening Google account chooser', () => login(false))}
         >
-          {connection.connected ? 'Switch Google account' : 'Sign in with Google'}
-        </button>
+          {connection.connected ? 'Switch imports account' : 'Connect Google data'}
+        </button>}
+        {!connection.configured && <div><p>Sign in to GOTEET above. Optional mail and file imports require a separate Google Desktop client under Advanced Google setup.</p>
+          <button disabled={!!busy} onClick={() => run('Transferring existing connection', async () => {
+            const result = await request('/api/google/migrate-legacy', {});
+            setMessage(result.migrated ? 'Existing connection transferred to GOTEET.' : 'No old connection was found. Configure Google data access below.');
+          })}>Transfer connection from an older installation</button>
+          <p className="muted">Only for an existing installation on this Mac. macOS may ask once to read the old Workmate credential.</p></div>}
         {connection.connected && (
           <button
             disabled={!!busy}
@@ -187,19 +193,18 @@ export function GoogleSetup({
       <details>
         <summary>Advanced Google setup</summary>
         <p>Project: {connection.project_id || 'Configured desktop client'} · Credentials: OS keychain</p>
-        <button onClick={() => window.workmate.external('https://myaccount.google.com/connections')}>
+        <button onClick={() => window.goteet.external('https://myaccount.google.com/connections')}>
           Review Google account access
         </button>
         <p>
-          Client registration is already handled on this Mac. These controls are for developer setup on
-          another installation. GOTEET's Google data connection and web-panel cookies are separate sessions.
+          Optional data imports need a Google Desktop OAuth client. These controls configure it on this device. GOTEET's Google data connection and web-panel cookies are separate sessions.
         </p>
         <div className="button-row">
           <button
             disabled={!!busy}
             onClick={() =>
               run('Importing client', async () => {
-                const value = await window.workmate.importOAuth();
+                const value = await window.goteet.importOAuth();
                 setMessage(value ? 'Desktop OAuth client imported.' : 'No client selected.');
               })
             }
@@ -208,7 +213,7 @@ export function GoogleSetup({
           </button>
           <button
             onClick={() =>
-              window.workmate.external('https://console.cloud.google.com/auth/overview?project=goteet')
+              window.goteet.external('https://console.cloud.google.com/auth/overview')
             }
           >
             Open Google setup
@@ -387,7 +392,7 @@ export function GoogleSetup({
                     onClick={() =>
                       run('Opening Drive file', async () => {
                         const r = await request('/api/drive/preview', { id: entry.id });
-                        onPreview(await window.workmate.preview(r.path));
+                        onPreview(await window.goteet.preview(r.path));
                       })
                     }
                   >
@@ -397,7 +402,7 @@ export function GoogleSetup({
                 {view === 'gmail' && <button onClick={onMail}>Read in GOTEET</button>}
                 {(entry.url || entry.htmlLink || entry.webViewLink) && (
                   <button
-                    onClick={() => window.workmate.external(entry.url || entry.htmlLink || entry.webViewLink)}
+                    onClick={() => window.goteet.external(entry.url || entry.htmlLink || entry.webViewLink)}
                   >
                     Open source
                   </button>

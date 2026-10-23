@@ -88,7 +88,7 @@ import { motion, useReducedMotion } from 'motion/react';
 
 declare global {
   interface Window {
-    workmate: {
+    goteet: {
       browser: (action: string, value?: unknown) => Promise<any>;
       onBrowser: (callback: (value: any) => void) => () => void;
       request: (method: string, route: string, value?: unknown) => Promise<any>;
@@ -185,7 +185,7 @@ const routes = [
 const short = (value?: string) => value?.split('/').at(-1) || '';
 function External({ url, children }: { url: string; children: React.ReactNode }) {
   return (
-    <button className="text-link" onClick={() => void window.workmate.external(url)}>
+    <button className="text-link" onClick={() => void window.goteet.external(url)}>
       {children}
       <ArrowUpRight size={13} />
     </button>
@@ -348,6 +348,7 @@ function App() {
   async function refresh() {
     const value = await api('/api/snapshot');
     setSnap(value);
+    if (value.identity?.name) setPreferences(p => ({ ...p, display_name: value.identity.name }));
     setError((old) => (/fetch failed|connection to the local service/i.test(old) ? '' : old));
     return value;
   }
@@ -481,15 +482,22 @@ function App() {
     refresh().catch(fail);
     loadConnections().catch(fail);
     loadWork();
-    api('/api/research').then(setResearch).catch(fail);
-    const timer = setInterval(() => {
-      refresh().catch(fail);
-      loadConnections().catch(fail);
-    }, 5000);
-    const agentTimer = setInterval(loadAgent, 15000);
+    api('/api/research').then(v => setResearch(Array.isArray(v) ? v : [])).catch(fail);
+    let polling = false;
+    const poll = async () => {
+      if (document.hidden || polling) return;
+      polling = true;
+      try { await refresh(); } catch (e) { fail(e); } finally { polling = false; }
+    };
+    const timer = setInterval(poll, 15000);
+    const connectionsTimer = setInterval(() => { if (!document.hidden) loadConnections().catch(fail); }, 60000);
+    const agentTimer = setInterval(() => { if (!document.hidden) loadAgent(); }, 60000);
+    window.addEventListener('focus', poll);
     return () => {
       clearInterval(timer);
       clearInterval(agentTimer);
+      clearInterval(connectionsTimer);
+      window.removeEventListener('focus', poll);
       stream.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
@@ -582,11 +590,11 @@ function App() {
             } else if (command.action === 'search') setQuery(command.value);
             else if (command.action === 'open_media') {
               setRoute('Media');
-              setPreviewFile(await window.workmate.preview(command.value));
+              setPreviewFile(await window.goteet.preview(command.value));
             } else if (command.action === 'close_media') setPreviewFile(null);
             else if (command.action === 'file_action') {
               const value = JSON.parse(command.value);
-              const result = await window.workmate.fileAction(value.action, value.path);
+              const result = await window.goteet.fileAction(value.action, value.path);
               if (/cancelled/i.test(result.message)) throw new Error(result.message);
               setNotice(result.message);
             } else if (command.action === 'browse_files') {
@@ -622,7 +630,7 @@ function App() {
     };
   }, [snap?.identity?.role]);
   useEffect(() => {
-    window.workmate.developerStatus().then(setDeveloper).catch(fail);
+    window.goteet.developerStatus().then(setDeveloper).catch(fail);
     api('/api/models')
       .then((v) => setModelAccounts(v.providers || []))
       .catch(() => {});
@@ -716,7 +724,7 @@ function App() {
         setBusy('Transcribing');
         try {
           const bytes = new Uint8Array(await new Blob(chunks, { type: 'audio/webm' }).arrayBuffer());
-          const result = await window.workmate.transcribe(Array.from(bytes));
+          const result = await window.goteet.transcribe(Array.from(bytes));
           setQuestion(result.text);
           setNotice('Transcribed locally. Review your words before sending.');
         } catch (e) {
@@ -898,7 +906,7 @@ function App() {
       if (p) setProjectFocus(p);
       setRoute('Projects');
     },
-    external: (url) => void window.workmate.external(url),
+    external: (url) => void window.goteet.external(url),
     track: (f) => {
       const src = (snap?.workspace?.followups || []).find((x: Row) => x.id === f.evidence?.[0]?.id) || {};
       openEditor('task', {
@@ -1052,7 +1060,7 @@ function App() {
         <div className="brand">
           <img className="brand-logo" src="./goteet-mark.svg" alt="" />
           <div>
-            GOTEET<small>Sanju’s workspace</small>
+            GOTEET<small>{preferences.display_name && preferences.display_name !== 'Local user' ? `${preferences.display_name}’s workspace` : 'Your workspace'}</small>
           </div>
         </div>
         <button className="nav-search" onClick={() => setPalette(true)}>
@@ -1111,7 +1119,7 @@ function App() {
                   <span>{(snap.identity?.name || 'S')[0]}</span>
                 )}
                 <div>
-                  {snap.identity?.name || 'Sanju'}
+                  {snap.identity?.name || 'Local user'}
                   <small>{owner ? 'Personal + team workspace' : 'Team member'}</small>
                 </div>
                 <Settings2 size={15} />
@@ -1937,7 +1945,7 @@ function App() {
                       <button
                         onClick={() =>
                           action('Updating profile photo', async () => {
-                            const value = await window.workmate.profilePhoto();
+                            const value = await window.goteet.profilePhoto();
                             if (value) setPreferences(value);
                           })
                         }
@@ -2001,24 +2009,15 @@ function App() {
                     <button
                       onClick={() =>
                         action('Importing OAuth client', async () => {
-                          await window.workmate.importOAuth();
+                          await window.goteet.importOAuth();
                           await loadConnections();
                         })
                       }
                     >
                       Import Google OAuth client
                     </button>
-                    <button
-                      className="primary"
-                      disabled={!connections.google?.configured || preferences.google_enabled === false}
-                      onClick={() =>
-                        action('Opening Google sign-in', async () => {
-                          const r = await api('/api/google/start', { sources: ['drive'] });
-                          await window.workmate.external(r.url);
-                        })
-                      }
-                    >
-                      {connections.google?.connected ? 'Switch Google account' : 'Sign in with Google'}
+                    <button className="primary" onClick={() => setRoute('Connections')}>
+                      Manage Google sign-in and imports
                     </button>
                     {connections.google?.connected && (
                       <button
@@ -2130,7 +2129,7 @@ function App() {
                     <div>
                       <strong>Automatic reports & analysis</strong>
                       <small>
-                        GOTEET analyses saved evidence every 12 hours, reports daily at 09:00 and weekly on Friday at 18:00 IST. Results appear in Inbox and Reports. Runs while GOTEET is open; the latest missed report catches up on launch. No Codex or Claude job is started.
+                        GOTEET refreshes enabled sources and analyses evidence every 30 minutes, reports daily at 09:00 and weekly on Friday at 18:00 IST. Results appear in Inbox and Reports. Runs while GOTEET is open; the latest missed report catches up on launch. No Codex or Claude job is started.
                       </small>
                     </div>
                     <Switch.Root
@@ -2142,6 +2141,15 @@ function App() {
                       <Switch.Thumb />
                     </Switch.Root>
                   </div>
+                  <label className="setting-field">Automatic analysis engine
+                    <select value={preferences.analysis_provider || ''} onChange={e => setPreferences({...preferences, analysis_provider:e.target.value})}>
+                      <option value="">Local evidence rules</option><option value="ollama">GOTEET local AI · Ollama</option>
+                    </select>
+                  </label>
+                  {preferences.analysis_provider === 'ollama' && <label className="setting-field">Installed local model name
+                    <input value={preferences.analysis_model || ''} placeholder="Choose an installed model in Models first" onChange={e=>setPreferences({...preferences,analysis_model:e.target.value})}/>
+                    <small>Uses the local model directly. No Codex or Claude process is launched. Model memory is released after each analysis. Suggestions require review.</small>
+                  </label>}
                   <label className="setting-field">
                     Start view
                     <select
@@ -2303,7 +2311,7 @@ function App() {
                       onClick={() =>
                         action('Checking for updates', async () => {
                           await savePreferences(preferences);
-                          setUpdate(await window.workmate.checkUpdates());
+                          setUpdate(await window.goteet.checkUpdates());
                         })
                       }
                     >
@@ -2544,9 +2552,9 @@ function App() {
                 f.source === 'Drive'
                   ? action('Opening Drive file', async () => {
                       const result = await api('/api/drive/preview', { id: f.id });
-                      setPreviewFile(await window.workmate.preview(result.path));
+                      setPreviewFile(await window.goteet.preview(result.path));
                     })
-                  : window.workmate.preview(f.path).then(setPreviewFile).catch(fail)
+                  : window.goteet.preview(f.path).then(setPreviewFile).catch(fail)
               }
               browse={() => browse(fileLocation)}
               fail={fail}
@@ -2629,7 +2637,7 @@ function App() {
                         {(report || snap.reports[0]).kind === 'daily' ? 'Daily brief' : 'Weekly review'}
                       </h2>
                       <button
-                        onClick={() => window.workmate.exportReport(report || snap.reports[0]).catch(fail)}
+                        onClick={() => window.goteet.exportReport(report || snap.reports[0]).catch(fail)}
                       >
                         <Download size={14} />
                         Export
@@ -2750,7 +2758,7 @@ function App() {
                     : 'Off · start with GOTEET_CDP_PORT=9223 to enable local interface control.'}
                 </p>
                 <p className="muted">
-                  Use workmate_client.py or mcp_server.py from the project. Local credentials are read from
+                  Use goteet_client.py or mcp_server.py from the project. Local credentials are read from
                   the owner-only runtime file. Remote team use needs an HTTPS server and member pairing.
                 </p>
               </section>
@@ -3293,7 +3301,7 @@ function Attachments({ type, id, fail }: { type: string; id: string; fail: (erro
           onClick={async () => {
             setBusy(true);
             try {
-              await window.workmate.attach(type, id);
+              await window.goteet.attach(type, id);
               await load();
             } catch (e) {
               fail(e);
@@ -3316,7 +3324,7 @@ function Attachments({ type, id, fail }: { type: string; id: string; fail: (erro
                 {(a.size / 1e6).toFixed(2)} MB · {a.author_name}
               </small>
             </div>
-            <button type="button" onClick={() => window.workmate.downloadAttachment(a).catch(fail)}>
+            <button type="button" onClick={() => window.goteet.downloadAttachment(a).catch(fail)}>
               <Download size={13} />
               Save & reveal
             </button>
@@ -3410,9 +3418,21 @@ function SystemView({ value }: { value: Row | null }) {
   );
 }
 
+class StartupBoundary extends React.Component<React.PropsWithChildren, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (this.state.failed) return <main style={{ padding: 48, color: '#171923', background: '#fff', minHeight: '100vh' }}>
+      <h1>GOTEET could not display this view</h1>
+      <p>Your saved workspace is unchanged. Reload to retry, or install the latest release.</p>
+      <button onClick={() => window.location.reload()}>Reload GOTEET</button>
+    </main>;
+    return this.props.children;
+  }
+}
 createRoot(document.getElementById('root')!).render(
-  <>
+  <StartupBoundary>
     <App />
     <BrowserPanel />
-  </>,
+  </StartupBoundary>,
 );

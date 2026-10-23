@@ -32,7 +32,7 @@ export function MailPanel({
       setNext(data.next);
       setExcluded(data.excluded);
     } catch (e) {
-      if (id === generation.current) setError(String(e));
+      if (id === generation.current) setError(String(e).replace(/^Error: Error invoking remote method '[^']+': Error: /, ''));
     } finally {
       if (id === generation.current) setBusy(false);
     }
@@ -48,6 +48,19 @@ export function MailPanel({
       reader.current++;
     };
   }, [folder, search, account]);
+  useEffect(() => {
+    const resume = () => { void load(); };
+    window.addEventListener('focus', resume);
+    return () => window.removeEventListener('focus', resume);
+  }, [folder, search, account]);
+  async function connectMail() {
+    setBusy(true); setError('');
+    try {
+      const result = await request('/api/google/start', { sources: ['gmail'] });
+      await window.goteet.external(result.url);
+    } catch (e) { setError(String(e)); }
+    finally { setBusy(false); }
+  }
   async function open(id: string) {
     const n = ++reader.current;
     setReading(true);
@@ -109,6 +122,9 @@ export function MailPanel({
       {error && (
         <p role="alert" className="inline-note">
           {error}
+          {error.includes('Gmail read access') && <><br />Sign-in identifies your account; Gmail needs your read-only consent.
+            <button disabled={busy} onClick={connectMail}>Connect Gmail and load mail</button>
+          </>}
         </p>
       )}
       <div className="mail-split">
@@ -150,8 +166,8 @@ export function MailPanel({
                 {message.date}
               </p>
               <div className="button-row">
-                <button onClick={() => window.workmate.external(message.url)}>Open in Gmail</button>
-                <button onClick={() => window.workmate.copyText(message.text)}>Copy message text</button>
+                <button onClick={() => window.goteet.external(message.url)}>Open in Gmail</button>
+                <button onClick={() => window.goteet.copyText(message.text)}>Copy message text</button>
               </div>
               <div className="mail-body">{message.text || 'No readable text body in this message.'}</div>
               {message.truncated && <p>Showing the first 200 KB.</p>}

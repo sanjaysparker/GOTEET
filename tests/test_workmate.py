@@ -207,6 +207,7 @@ def test_media_tag_cannot_reference_arbitrary_files(workspace):
         assert client.post('/api/media/tag',headers=headers(),json={'path':'/private/secrets','collection':'work'}).status_code==400
 
 def test_failed_github_refresh_keeps_prior_snapshot(workspace,monkeypatch):
+    settings.save({'github_enabled':True})
     original={'github':[{'full_name':'keep/repo'}],'captured_at':'previous'}
     (workspace/'inventory.json').write_text(json.dumps(original))
     def fail(*a,**k):raise RuntimeError('offline')
@@ -357,7 +358,7 @@ def test_google_callback_auto_drive_only_after_grant(workspace,monkeypatch):
     import google_auth
     calls=[]
     monkeypatch.setattr(google_auth,'finish',lambda *args:{'name':'Demo'})
-    monkeypatch.setattr(google_auth,'setup_drive',lambda:calls.append('drive'))
+    monkeypatch.setattr(google_auth,'sync',lambda sources:calls.extend(sources))
     monkeypatch.setitem(google_auth.PENDING,'test-auto',{'sources':['drive']})
     with TestClient(api.app) as client:
         monkeypatch.setattr(google_auth,'status',lambda:{'sources':{'drive':False}})

@@ -55,7 +55,7 @@ import logging
 import time
 from collector import DATA, STATE, now
 
-app=FastAPI(title='GOTEET local API',version='0.5.6')
+app=FastAPI(title='GOTEET local API',version='0.5.7')
 TOKEN=os.environ.get('WORKMATE_API_TOKEN') or secrets.token_urlsafe(48)
 INSTANCE=str(uuid.uuid4())
 BASE_URL=''
@@ -117,7 +117,7 @@ def owner_only(request:Request):
     if request.state.identity['role']!='owner':raise PermissionError('Only the workspace owner can do this')
 
 @app.get('/api/health')
-def health():return {'ok':True,'version':'0.5.6','instance':INSTANCE,'pid':os.getpid()}
+def health():return {'ok':True,'version':'0.5.7','instance':INSTANCE,'pid':os.getpid()}
 
 @app.get('/api/snapshot')
 def snapshot(request:Request):
@@ -382,8 +382,15 @@ def sync():
 @app.post('/api/reports')
 def report(value:dict):return engine.report(value.get('kind','daily'))
 
+@app.get('/api/project-evidence')
+def project_evidence():
+    import agent_observer
+    return agent_observer.compact() or {'projects':[]}
+
 @app.get('/api/research')
-def research():return engine.read_json('opensource.json')
+def research():
+    value=engine.read_json('opensource.json')
+    return value if isinstance(value,list) else []
 
 @app.get('/api/connections')
 def connections():
@@ -469,7 +476,11 @@ def transcribe(audio:UploadFile=File(...)):
             text=' '.join(s.text.strip() for s in segments)
         return {'text':text,'language':info.language}
     except Exception:raise HTTPException(503,'Audio could not be transcribed. Check the microphone and try a shorter recording.')
-    finally:VOICE_LOCK.release()
+    finally:
+        WHISPER=None
+        import gc
+        gc.collect()
+        VOICE_LOCK.release()
 
 @app.post('/api/google/configure')
 def google_config(value:dict):return google_auth.configure(value)
@@ -485,6 +496,11 @@ def google_check():
     except Exception:
         return {'verified':False,'message':'Unable to verify Google right now. Check your network and keychain access, then retry; reconnect if access was revoked.'}
 
+@app.post('/api/google/migrate-legacy')
+def google_migrate_legacy():
+    settings.require('google_enabled')
+    return google_auth.migrate_legacy()
+
 @app.post('/api/google/start')
 def google_start(value:dict):
     settings.require('google_enabled')
@@ -496,8 +512,8 @@ def google_callback(background_tasks:BackgroundTasks,code:str='',state:str='',er
     requested=google_auth.PENDING.get(state,{}).get('sources',[])
     try:profile=google_auth.finish(code,state)
     except Exception:return HTMLResponse(google_auth.completion_page(failed=True),status_code=400,headers={'Cache-Control':'no-store'})
-    if 'drive' in requested and google_auth.status().get('sources',{}).get('drive'):
-        background_tasks.add_task(google_auth.setup_drive)
+    if requested:
+        background_tasks.add_task(google_auth.setup_sources, requested)
     return HTMLResponse(google_auth.completion_page(profile),headers={'Cache-Control':'no-store'})
 
 @app.post('/api/google/sync')

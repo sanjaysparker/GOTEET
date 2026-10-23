@@ -102,3 +102,26 @@ Live end-to-end schedule proof: on 23 October at 18:21:03 IST the installed back
 - Intel Electron main window rendered and was inspected via screenshot/CDP; test instance closed afterward. This is Rosetta validation, not physical Intel hardware testing.
 - Binary load-command audit requires macOS 14; installer declares 14.0. DMG integrity verified with hdiutil.
 - Installer and SHA256 published to v0.5.6. Unsigned/not notarized. GitHub native Intel workflow added; first cloud attempt found stale npm lockfile URL/integrity, corrected for subsequent run.
+
+## Clean distribution and resource correction — 0.5.7
+
+- Removed personal profile/sidebar/prompt defaults. New workspaces open Connections with Local user, no saved tasks/projects/imports, and collection/analysis disabled. Existing profiles are preserved.
+- Fixed Supabase authorize routing to the system browser and the missing open-source catalog response that crashed Connections on clean installs.
+- Main refresh 15 s (skipped while hidden), connections/insights 60 s. Speech model released after transcription. Chromium cache budgets 64/32 MiB.
+- Installed arm64 bundle shrank from 664 MiB to 536 MiB. One idle sample: 443.3 MiB RSS across five processes, 0.7% aggregate CPU over two seconds. These are observations, not maximum-memory guarantees.
+- Quit check: zero desktop/API processes remaining; independently hosted MCP clients excluded and reported separately.
+- Repository history scan: 404 Git objects checked, no credential-pattern hits or tracked data/report/database paths. Repository made public by explicit user request. Old installers reverted to drafts pending replacement.
+
+### Final 0.5.7 distribution checks (2026-10-23)
+- Fresh Intel desktop tested under Rosetta, not only the backend: Connections renders, neutral local identity, Google login enabled, new `window.goteet` bridge present, no renderer recovery screen. Screenshot retained locally at `/tmp/goteet-intel-fresh.png` (not repository media).
+- Intel architecture audit: 140 Mach-O binaries support x86_64; packaged health/settings/snapshot/tasks/projects/scheduler pass. Physical Intel hardware remains untested.
+- Main Python suite: 119 passed. Targeted first-run/cloud/scheduler suite: 15 passed. TypeScript/Vite build and desktop JavaScript syntax pass.
+- Both DMGs pass hdiutil checksum verification. Installers are unsigned and not notarized; Intel requires macOS 14+.
+- Backend executable renamed goteet-api; Google credential service renamed in.droneos.goteet.google. Explicit legacy transfer retains existing records and never probes the old service during startup. Legacy DB/environment/CLI identifiers remain compatible.
+- Google callback imports requested and granted sources, not just Drive; a unit test verifies denied sources are excluded. Live Gmail consent and full import are not claimed verified.
+- Intel cloud login button reaches its waiting state without a renderer error. Full interactive Google login is not claimed tested.
+- Quit verified zero installed desktop/API processes (independently launched MCP processes excluded).
+- Startup revised on request: the ready splash waits for explicit Enter GOTEET; no automatic reveal. Dedicated sandboxed preload exposes only ready/enter/quit; main process validates the splash sender.
+- Splash layout corrected to normal vertical flow; 560×380 headless render inspected after animation, with separate tagline, controls and status. Intel click-gate test passed: splash persists after readiness, Enter opens neutral Connections.
+- Project observation: scheduler slots now every 30 minutes; enabled sources remain gated. Task/project details poll cached project summaries every 60 seconds while visible. Optional automatic Ollama summaries never apply plan steps and request model unloading (`keep_alive: 0`). No local Ollama server was reachable during verification; live model narration remains unverified.
+- Final installed-resource sample before splash refinement: 5 desktop processes, 564.8 MiB RSS, 0.6% CPU over two seconds, 517 MiB bundle. These are short samples, not maximum usage or proof of RAM reduction.

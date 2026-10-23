@@ -1,6 +1,6 @@
 {
   "name": "goteet-desktop",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "private": true,
   "description": "GOTEET agentic work assistant",
   "author": "DroneOS",
@@ -24,7 +24,8 @@
     },
     "files": [
       "desktop/**",
-      "dist/**"
+      "dist/**",
+      "!node_modules/**"
     ],
     "extraResources": [
       {
@@ -86,5 +87,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.4"
   },
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "pe-library": "0.4.1"
+  }
 }

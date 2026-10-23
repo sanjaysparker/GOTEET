@@ -32,7 +32,7 @@ function FileMenu({ file, fail }: { file: Row; fail: (e: unknown) => void }) {
           ].map(([action, label]) => (
             <DropdownMenu.Item
               key={action}
-              onSelect={() => window.workmate.fileAction(action, file.path).catch(fail)}
+              onSelect={() => window.goteet.fileAction(action, file.path).catch(fail)}
             >
               {label}
             </DropdownMenu.Item>
@@ -131,7 +131,7 @@ export function MediaLibrary({
   const collections = Array.from(new Set(Object.values(tags).filter(Boolean))) as string[];
   async function tag(file: Row, value: string) {
     try {
-      await window.workmate.request('POST', '/api/media/tag', { path: file.path, collection: value });
+      await window.goteet.request('POST', '/api/media/tag', { path: file.path, collection: value });
       saved();
     } catch (e) {
       fail(e);

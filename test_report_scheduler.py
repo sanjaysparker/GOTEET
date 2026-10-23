@@ -29,3 +29,16 @@ class SchedulerTests(unittest.TestCase):
                 r.tick(at+dt.timedelta(days=1))
                 self.assertEqual(report.call_count,3);self.assertEqual(analyse.call_count,2)
 if __name__=='__main__':unittest.main()
+
+
+def test_analysis_slot_changes_every_half_hour():
+    at=dt.datetime.fromisoformat('2026-10-23T18:29:00+05:30')
+    assert r.slots(at)['analysis'].endswith('18:00:00+05:30')
+    assert r.slots(at+dt.timedelta(minutes=1))['analysis'].endswith('18:30:00+05:30')
+
+
+def test_automatic_ai_uses_local_model_and_notifies_only():
+    with patch.object(r.insights,'analyse',return_value={'totals':{'open':1},'counts':{'critical':0},'findings':[]}),patch.object(r.settings,'get',return_value={'analysis_provider':'ollama','analysis_model':'local-test'}),patch.object(r.insights,'run',return_value={'analysis':{'summary':'Observed work','id':'test'}}) as run,patch.object(r.work,'notify') as notify:
+        r.analyse_local()
+        assert run.call_args.args[:2]==('ollama','local-test')
+        assert notify.call_count==1

@@ -1,5 +1,8 @@
 """Cloud auth regression tests; no live users, tokens or keychain writes."""
 import time
+import tempfile
+from pathlib import Path
+import settings
 import unittest
 from unittest.mock import patch
 from urllib.parse import urlparse, parse_qs
@@ -8,6 +11,8 @@ import cloud_auth as c
 class CloudAuthTests(unittest.TestCase):
     def setUp(self):
         c.PENDING.clear()
+        temp=tempfile.TemporaryDirectory();self.addCleanup(temp.cleanup)
+        patcher=patch.object(settings,'DATA',Path(temp.name));patcher.start();self.addCleanup(patcher.stop)
     def test_provider_disabled(self):
         with patch.object(c, '_request', return_value={'external': {'google': False}}):
             with self.assertRaisesRegex(ValueError, 'Web OAuth'):

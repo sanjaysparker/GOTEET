@@ -11,9 +11,16 @@ import httpx
 import keyring
 from collector import DATA, now
 
-SERVICE='in.droneos.workmate'
+SERVICE='in.droneos.goteet.google'
 PENDING={}
 DRIVE_SETUP={'state':'idle','message':''}
+
+def setup_sources(sources):
+    """Import only permissions actually granted after consent."""
+    granted=status().get('sources',{})
+    selected=[name for name in sources if granted.get(name)]
+    if selected: return sync(selected)
+    return {'errors':[]}
 
 def setup_drive():
     DRIVE_SETUP.update(state='importing',message='Setting up Drive automatically…')
@@ -60,6 +67,16 @@ def read_secret(name):
     return json.loads(value) if value else None
 
 def save_secret(name,value):keyring.set_password(SERVICE,name,json.dumps(value))
+
+def migrate_legacy():
+    """Explicit one-time transfer; never probe old Keychain during normal startup."""
+    moved=0
+    for name in ('google-client','google-tokens'):
+        if read_secret(name):continue
+        raw=keyring.get_password('in.droneos.workmate',name)
+        if raw:
+            save_secret(name,json.loads(raw));moved+=1
+    return {'migrated':moved}
 
 def configure(value):
     value=value.get('installed',value)

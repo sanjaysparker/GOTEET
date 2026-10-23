@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { ArrowUp, Copy, File, Folder, FolderOpen, RefreshCw, Share2, Trash2 } from 'lucide-react';
 type Row = Record<string, any>;
-const api = (route: string) => window.workmate.request('GET', route);
+const api = (route: string) => window.goteet.request('GET', route);
 export function FilesPanel({
   initialPath,
   preview,
@@ -69,7 +69,7 @@ export function FilesPanel({
       return;
     }
     try {
-      preview(await window.workmate.browsePreview(item.path));
+      preview(await window.goteet.browsePreview(item.path));
     } catch (e) {
       fail(e);
     }
@@ -78,7 +78,7 @@ export function FilesPanel({
     if (!selected) return;
     setBusy(true);
     try {
-      const result = await window.workmate.fileAction(name, selected.path);
+      const result = await window.goteet.fileAction(name, selected.path);
       setNotice(result.message);
       if (name === 'trash') await load();
     } catch (e) {

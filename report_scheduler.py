@@ -22,7 +22,7 @@ def slots(at):
     if daily > at: daily -= dt.timedelta(days=1)
     weekly = at.replace(hour=18, minute=0, second=0, microsecond=0) - dt.timedelta(days=(at.weekday()-4)%7)
     if weekly > at: weekly -= dt.timedelta(days=7)
-    analysis = at.replace(hour=(at.hour//12)*12, minute=0, second=0, microsecond=0)
+    analysis = at.replace(minute=(at.minute//30)*30, second=0, microsecond=0)
     return {'daily':daily.isoformat(), 'weekly':weekly.isoformat(), 'analysis':analysis.isoformat()}
 
 def _ensure(c):
@@ -33,7 +33,7 @@ def status():
         _ensure(c)
         rows=[dict(r) for r in c.execute('SELECT * FROM report_schedule')]
     return {'enabled':settings.get()['auto_analysis'], 'timezone':'Asia/Kolkata',
-            'daily':'09:00', 'weekly':'Friday 18:00', 'analysis':'Every 12 hours',
+            'daily':'09:00', 'weekly':'Friday 18:00', 'analysis':'Every 30 minutes',
             'runs':rows,'runtime':'While GOTEET is open; latest missed run catches up after launch.',
             'engine':'Local evidence analysis; no external agent invoked.'}
 
@@ -42,6 +42,14 @@ def analyse_local():
     summary='\n'.join(['GOTEET automatic evidence analysis',
         f"{result['totals']['open']} open tasks · {result['counts']['critical']} critical findings", *[
         f"{f['title']} — {f['detail']} Recommendation: {f['suggestion']}" for f in result['findings'][:12]]])
+    prefs=settings.get()
+    if prefs.get('analysis_provider')=='ollama' and prefs.get('analysis_model'):
+        try:
+            result_ai=insights.run('ollama',prefs['analysis_model'],'Automatic project review. Observed evidence only; propose updates for review, never apply them.')
+            work.notify('analysis','Automatic AI project review',result_ai['analysis']['summary'][:1200], 'analysis',result_ai['analysis']['id'],'goteet-scheduler')
+            return
+        except Exception as error:
+            summary+='\nLocal AI unavailable ('+type(error).__name__+'); evidence analysis retained.'
     c=insights._store()
     try:
         ident=str(uuid.uuid4())

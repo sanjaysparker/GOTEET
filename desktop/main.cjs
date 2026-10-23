@@ -17,6 +17,9 @@ const execFileAsync = promisify(execFile);
 const fs = require('node:fs');
 const path = require('node:path');
 app.setName('GOTEET');
+// Bound Chromium's disposable disk cache; user documents and models are separate.
+app.commandLine.appendSwitch('disk-cache-size', String(64 * 1024 * 1024));
+app.commandLine.appendSwitch('media-cache-size', String(32 * 1024 * 1024));
 let splash,
   backend,
   windowRef,
@@ -99,8 +102,8 @@ async function startBackend() {
     ? path.join(
         process.resourcesPath,
         'payload',
-        'workmate-api',
-        process.platform === 'win32' ? 'workmate-api.exe' : 'workmate-api',
+        'goteet-api',
+        process.platform === 'win32' ? 'goteet-api.exe' : 'goteet-api',
       )
     : path.join(repo, '.venv312', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
   backend = spawn(command, app.isPackaged ? [] : [path.join(repo, 'api.py')], {
@@ -281,8 +284,8 @@ ipcMain.handle('agent-access', async (event) => {
     ? path.join(
         process.resourcesPath,
         'payload',
-        'workmate-api',
-        process.platform === 'win32' ? 'workmate-api.exe' : 'workmate-api',
+        'goteet-api',
+        process.platform === 'win32' ? 'goteet-api.exe' : 'goteet-api',
       )
     : path.join(repo, '.venv312', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
   return {
@@ -366,7 +369,7 @@ ipcMain.handle('external', async (event, url) => {
   const parsed = new URL(url);
   if (parsed.protocol !== 'https:' || parsed.username || parsed.password) throw Error('Use an HTTPS link');
   // Google's installed-app consent must run in the system browser.
-  if (parsed.hostname === 'accounts.google.com') {
+  if (require('./auth-links.cjs').isAccountSignIn(parsed.href)) {
     await shell.openExternal(parsed.href);
     return;
   }
@@ -451,11 +454,28 @@ app.whenReady().then(async () => {
   try {
     splash = new BrowserWindow({width:560,height:380,frame:false,resizable:false,
       title:'Starting GOTEET',backgroundColor:'#0c0e17',show:false,
-      webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true}});
+      webPreferences:{preload:path.join(__dirname,'splash-preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
     splash.webContents.setWindowOpenHandler(() => ({action:'deny'}));
     splash.webContents.on('will-navigate', e => e.preventDefault());
     await splash.loadFile(path.join(__dirname,'splash.html'));
     splash.show();
+    const startupWindow = splash;
+    let startupReady = false;
+    const enterRequested = new Promise(resolve => {
+      const enter = event => {
+        if (event.sender !== startupWindow.webContents || !startupReady) return;
+        ipcMain.removeListener('startup-enter', enter);
+        resolve();
+      };
+      ipcMain.on('startup-enter', enter);
+      startupWindow.on('closed', () => {
+        ipcMain.removeListener('startup-enter', enter);
+        if (!startupReady || !windowRef?.isVisible()) app.quit();
+      });
+    });
+    ipcMain.on('startup-quit', event => {
+      if (!startupWindow.isDestroyed() && event.sender === startupWindow.webContents) app.quit();
+    });
     const splashStarted = Date.now();
     await startBackend();
     if (!splash.isDestroyed()) await splash.webContents.executeJavaScript("document.getElementById('status').textContent='Opening your workspace…'");
@@ -524,6 +544,9 @@ app.whenReady().then(async () => {
     windowRef.webContents.on('will-navigate', (event) => event.preventDefault());
     await windowRef.loadFile(path.join(repo, 'dist/index.html'));
     await delay(Math.max(0, 1400 - (Date.now() - splashStarted)));
+    startupReady = true;
+    splash.webContents.send('startup-ready');
+    await enterRequested;
     windowRef.show();
     if (splash && !splash.isDestroyed()) splash.destroy();
     splash = null;

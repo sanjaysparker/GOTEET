@@ -554,7 +554,7 @@ function Editor({
               <input
                 value={d.owner || ''}
                 onChange={(e) => set('owner', e.target.value)}
-                placeholder="Sanju"
+                placeholder="Owner name"
               />
             </label>
             <label>

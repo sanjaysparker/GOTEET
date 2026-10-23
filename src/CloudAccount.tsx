@@ -29,7 +29,7 @@ export function CloudAccount() {
     setBusy(true); setError('');
     try {
       const result = await api('/api/cloud/start', {});
-      await window.workmate.external(result.url);
+      await window.goteet.external(result.url);
       setWaiting(true);
     } catch (e) { setError(cleanError(e)); }
     finally { setBusy(false); }

@@ -81,6 +81,9 @@ def finish(code, state):
         user = _request('GET', '/auth/v1/user', token=session['access_token'])
         session['user'] = user
         _save(session)
+        import settings
+        profile_name=(user.get('user_metadata') or {}).get('full_name') or user.get('email') or 'Local user'
+        settings.save({'display_name':profile_name[:200]})
         return {'email': user.get('email'), 'name': (user.get('user_metadata') or {}).get('full_name', '')}
 
 def logout():

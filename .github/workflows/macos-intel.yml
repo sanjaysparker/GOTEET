@@ -29,7 +29,7 @@ jobs:
           npm ci
       - name: Test and build
         run: |
-          python -m pytest test_cloud_auth.py test_report_scheduler.py -q
+          python -m pytest test_first_run.py test_cloud_auth.py test_report_scheduler.py -q
           npm run build
           GOTEET_PAYLOAD_DIR=build/intel/payload GOTEET_BUILD_DIR=build/intel python scripts/package_backend.py
           npm run package:mac:intel

@@ -58,12 +58,12 @@ def test_settings_concurrent_saves_lose_nothing_and_bad_timezone_is_400(isolated
     [t.start() for t in threads];[t.join() for t in threads]
     assert errors==[]
     assert not list(isolated.glob('*.tmp'))
-    assert json.loads((isolated/'settings.json').read_text())['display_name']=='Sanju'
+    assert json.loads((isolated/'settings.json').read_text())['display_name']=='Local user'
     with TestClient(api.app) as client:
         r=client.post('/api/settings',headers=H(),json={'timezone':'Mars/Olympus'})
         assert r.status_code==400 and 'timezone' in r.json()['detail']
         assert client.post('/api/settings',headers=H(),json={'theme':'phosphor','accent':''}).json()['theme']=='phosphor'
-    assert settings.get()['auto_analysis'] is True and settings.get()['analysis_provider']==''
+    assert settings.get()['auto_analysis'] is False and settings.get()['analysis_provider']==''
 
 def account_workspace(data):
     preview=data/'drive-previews';preview.mkdir();cached=preview/'cached.pdf';cached.write_bytes(b'%PDF')

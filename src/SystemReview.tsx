@@ -88,7 +88,7 @@ export function SystemReview({
   async function check(ai = false) {
     setBusy(true);
     try {
-      const result = await window.workmate.request(
+      const result = await window.goteet.request(
         'POST',
         ai ? '/api/system/analyse' : '/api/system/health',
         ai ? { provider, model } : {},

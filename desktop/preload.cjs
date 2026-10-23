@@ -1,5 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
-contextBridge.exposeInMainWorld('workmate', {
+contextBridge.exposeInMainWorld('goteet', {
   browser: (action, value) => ipcRenderer.invoke('browser', action, value),
   onBrowser: (callback) => {
     const listener = (_event, value) => callback(value);

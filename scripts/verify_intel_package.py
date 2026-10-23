@@ -9,7 +9,7 @@ import time
 import urllib.request
 
 bundle = Path(sys.argv[1]).resolve()
-executables = [bundle/'Contents/MacOS/GOTEET', bundle/'Contents/Resources/payload/workmate-api/workmate-api']
+executables = [bundle/'Contents/MacOS/GOTEET', bundle/'Contents/Resources/payload/goteet-api/goteet-api']
 count = 0
 for path in bundle.rglob('*'):
     if not path.is_file() or path.is_symlink():
@@ -28,7 +28,7 @@ print(f'Architecture audit: {count} Mach-O files support x86_64', flush=True)
 with tempfile.TemporaryDirectory(prefix='goteet-intel-smoke-') as directory:
     root = Path(directory)
     (root/'data').mkdir()
-    (root/'data/settings.json').write_text(json.dumps({'auto_analysis':False,'google_enabled':False,'agent_observer_enabled':False,'activity_enabled':False}))
+    # Exercise real first-run defaults, without injecting a user's settings.
     with (root/'backend.log').open('w+') as log:
         process = subprocess.Popen([str(executables[1])], env={**os.environ, 'WORKMATE_HOME':directory}, stdout=log, stderr=log)
         try:
@@ -45,10 +45,15 @@ with tempfile.TemporaryDirectory(prefix='goteet-intel-smoke-') as directory:
                             health = json.load(response)
                         assert health['ok']
                         print('Packaged API health:', health['ok'], 'version:', health['version'])
-                        for endpoint in ['/api/tasks', '/api/projects', '/api/scheduler']:
+                        for endpoint in ['/api/tasks', '/api/projects', '/api/scheduler', '/api/settings', '/api/snapshot']:
                             request = urllib.request.Request(config['url']+endpoint, headers={'Authorization':'Bearer '+config['token']})
                             with urllib.request.urlopen(request, timeout=5) as response:
-                                json.load(response)
+                                value=json.load(response)
+                            if endpoint=='/api/settings':
+                                assert value['display_name']=='Local user' and not value['auto_analysis']
+                            if endpoint=='/api/snapshot':
+                                assert not value['tasks'] and not value['projects'] and not value['workspace']
+                                assert value['identity']['name']=='Local user'
                             print('HTTP 200:', endpoint)
                         break
                     except (OSError, ValueError):

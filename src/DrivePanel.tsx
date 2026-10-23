@@ -92,7 +92,7 @@ export function DrivePanel({
     setError('');
     try {
       const r = await request('/api/drive/preview', { id: file.id });
-      onPreview(await window.workmate.preview(r.path));
+      onPreview(await window.goteet.preview(r.path));
     } catch (e) {
       setError(String(e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/, ''));
     } finally {

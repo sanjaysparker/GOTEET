@@ -130,7 +130,7 @@ export function ActivityView(p: Props) {
   async function wipe() {
     if (!confirm('Delete all observed activity data? Logs and repositories are not touched.')) return;
     try {
-      await window.workmate.request('DELETE', '/api/activity/data');
+      await window.goteet.request('DELETE', '/api/activity/data');
       p.reload();
       p.notify('Activity data deleted');
     } catch (e) {

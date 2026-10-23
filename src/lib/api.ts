@@ -1,8 +1,8 @@
 export type Row = Record<string, any>;
 
 export const api = (route: string, value?: unknown) =>
-  window.workmate.request(value === undefined ? 'GET' : 'POST', route, value);
-export const remove = (route: string) => window.workmate.request('DELETE', route);
+  window.goteet.request(value === undefined ? 'GET' : 'POST', route, value);
+export const remove = (route: string) => window.goteet.request('DELETE', route);
 
 export const cleanError = (e: unknown) =>
   (e instanceof Error ? e.message : String(e)).replace(

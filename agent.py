@@ -87,7 +87,7 @@ def plan(question,provider='codex',model=''):
             proposal=Plan.model_validate_json(output.read_text())
     elif provider=='ollama':
         if not model:raise ValueError('Select an installed local model')
-        r=httpx.post('http://127.0.0.1:11434/api/chat',json={'model':model,'stream':False,'format':Plan.model_json_schema(),
+        r=httpx.post('http://127.0.0.1:11434/api/chat',json={'model':model,'stream':False,'keep_alive':0,'format':Plan.model_json_schema(),
           'messages':[{'role':'system','content':instructions}]},timeout=180)
         r.raise_for_status();proposal=Plan.model_validate_json(r.json()['message']['content'])
     elif provider=='claude':proposal=Plan.model_validate_json(model_setup.claude_text(instructions,Plan.model_json_schema()))

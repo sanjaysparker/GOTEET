@@ -134,3 +134,19 @@ npm run package:mac:intel
 ```
 
 Intel dependencies pin ONNX Runtime 1.23.2 and cryptography 48.0.1 because newer releases lack Intel macOS wheels. The payload is isolated from the arm64 build. Current packages are unsigned and not notarized; macOS may require approval in Privacy & Security.
+
+## First launch and resource use
+
+A fresh installation opens Connections with a neutral **Local user** profile. **Continue with Google** opens the system browser; each person chooses their own account. Signing in updates the local display name. Google mail/Drive imports are separate optional connections; they require a Desktop OAuth client and their own consent. Existing local accounts remain on their original device.
+
+New installations do not automatically index files, scan GitHub, observe agents or run scheduled analysis. Enable the desired permissions in Settings. The main workspace refreshes every 15 seconds while visible; connection checks run every minute. Speech models are released after transcription. Chromium disk/media cache budgets are 64/32 MB. Downloads, documents and intentionally installed models are stored separately and are not deleted as cache.
+
+Closing all windows or quitting stops the desktop and its backend. MCP adapters explicitly launched by another agent are owned by that host and may remain until it disconnects. The installed app and saved data still occupy disk when closed.
+
+### Google connections and first launch
+
+New installations start with **Your workspace / Local user**, no bundled personal account or workspace data. **Continue with Google** signs into the shared GOTEET account. Gmail, Drive and Calendar content require separate read-only consent under **Optional Google data imports**; granting identity alone does not grant mailbox access. Requested and granted imports run automatically after consent. An existing Mac can use **Transfer connection from an older installation** once to retain its prior connection after the credential-service rename.
+
+The desktop backend is named `goteet-api`. Historical `WORKMATE_*` environment variables and local database names remain supported for existing workspaces. Re-copy the current MCP configuration from Agents when upgrading an external client that still references the old executable path.
+
+Automatic work analysis refreshes enabled sources every 30 minutes while the desktop is open. Enable agent observation to include cached Codex/Claude session and git metadata in project details. Under Preferences, the optional **GOTEET local AI · Ollama** engine uses an installed local model directly and requests unloading after each analysis. It saves evidence summaries and reviewable suggestions; it never treats commits as completed tasks. The default evidence engine works without a model.

@@ -30,7 +30,7 @@ export function MediaViewer({
     const file = candidates[index + delta];
     if (!file) return;
     try {
-      onChange(await window.workmate.preview(file.path));
+      onChange(await window.goteet.preview(file.path));
     } catch (e) {
       fail(e);
     }
@@ -72,7 +72,7 @@ export function MediaViewer({
             {initial.mime_type} · {(initial.size / 1e6).toFixed(2)} MB{dimensions && ' · ' + dimensions}
           </small>
         </div>
-        <button onClick={() => window.workmate.reveal(initial.path).catch(fail)}>
+        <button onClick={() => window.goteet.reveal(initial.path).catch(fail)}>
           <FolderOpen size={15} />
           Reveal
         </button>
@@ -85,7 +85,7 @@ export function MediaViewer({
           <div className="viewer-error">
             <h3>Preview unavailable</h3>
             <p>{error}</p>
-            <button onClick={() => window.workmate.reveal(initial.path).catch(fail)}>
+            <button onClick={() => window.goteet.reveal(initial.path).catch(fail)}>
               Reveal original file
             </button>
           </div>

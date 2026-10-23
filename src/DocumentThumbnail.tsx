@@ -37,7 +37,7 @@ export default function DocumentThumbnail({ file }: { file: Record<string, any> 
         bounded(async () => {
           if (cancelled) return;
           if (file.source === 'Drive') {
-            const result = await window.workmate.request(
+            const result = await window.goteet.request(
               'GET',
               '/api/drive/thumbnail/' + encodeURIComponent(file.id),
             );
@@ -47,7 +47,7 @@ export default function DocumentThumbnail({ file }: { file: Record<string, any> 
             }
             return;
           }
-          const info = await window.workmate.preview(file.path);
+          const info = await window.goteet.preview(file.path);
           if (cancelled) return;
           if (info.mime_type === 'application/pdf') {
             if (info.size > 25000000) throw Error('Large PDF');

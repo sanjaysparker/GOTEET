@@ -6,14 +6,14 @@ export function BrowserPanel() {
     [problem, setProblem] = useState('');
   const viewport = useRef<HTMLDivElement>(null);
   const command = (action: string, value?: unknown) =>
-    window.workmate.browser(action, value).catch((e) => setProblem(String(e)));
+    window.goteet.browser(action, value).catch((e) => setProblem(String(e)));
   useEffect(() => {
     const update = (v: any) => {
       setState(v);
       setAddress(v.url || '');
     };
-    window.workmate.browser('state').then(update);
-    return window.workmate.onBrowser(update);
+    window.goteet.browser('state').then(update);
+    return window.goteet.onBrowser(update);
   }, []);
   useEffect(() => {
     if (!state.open || !viewport.current) return;

@@ -9,7 +9,7 @@ backend='keyring.backends.macOS' if sys.platform=='darwin' else 'keyring.backend
 output=os.environ.get('GOTEET_PAYLOAD_DIR','payload')
 work=os.environ.get('GOTEET_BUILD_DIR','build')
 print('Freezing backend for', platform.machine(), 'into', output, flush=True)
-args=[sys.executable,'-m','PyInstaller','--noconfirm','--onedir','--name','workmate-api','--distpath',output,'--workpath',str(Path(work)/'pyinstaller'),'--specpath',work]
+args=[sys.executable,'-m','PyInstaller','--noconfirm','--onedir','--name','goteet-api','--distpath',output,'--workpath',str(Path(work)/'pyinstaller'),'--specpath',work]
 for name in ['faster_whisper','ctranslate2','tokenizers','onnxruntime']:args+=['--collect-all',name]
 args+=['--hidden-import',backend,'api.py']
 environment=dict(os.environ)

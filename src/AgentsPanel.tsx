@@ -3,7 +3,7 @@ import * as Switch from '@radix-ui/react-switch';
 import { Copy, ExternalLink, RefreshCw } from 'lucide-react';
 type Row = Record<string, any>;
 const api = (route: string, value?: unknown) =>
-  window.workmate.request(value === undefined ? 'GET' : 'POST', route, value);
+  window.goteet.request(value === undefined ? 'GET' : 'POST', route, value);
 export function AgentsPanel({
   models,
   preview,
@@ -88,9 +88,9 @@ export function AgentsPanel({
             <div className="button-row">
               <button
                 onClick={() =>
-                  window.workmate
+                  window.goteet
                     .agentAccess()
-                    .then((value) => window.workmate.copyText(JSON.stringify(value.mcpConfig, null, 2)))
+                    .then((value) => window.goteet.copyText(JSON.stringify(value.mcpConfig, null, 2)))
                     .then(() => setNotice('GOTEET MCP configuration copied'))
                     .catch(fail)
                 }
@@ -100,7 +100,7 @@ export function AgentsPanel({
               </button>
               <button
                 onClick={() =>
-                  window.workmate
+                  window.goteet
                     .external('https://modelcontextprotocol.io/docs/getting-started/intro')
                     .catch(fail)
                 }
@@ -143,7 +143,7 @@ export function AgentsPanel({
                   </small>
                   <button
                     className="text-link"
-                    onClick={() => window.workmate.browsePreview(skill.path).then(preview).catch(fail)}
+                    onClick={() => window.goteet.browsePreview(skill.path).then(preview).catch(fail)}
                   >
                     Read skill
                   </button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, CalendarDays, ListChecks, Folder, Clock3, Plus, X } from 'lucide-react';
 type Row = Record<string, any>;
 export function WorkItemDetails({
@@ -17,6 +17,15 @@ export function WorkItemDetails({
   openTask: (task: Row) => void;
 }) {
   const [entry, setEntry] = useState('');
+  const [observed, setObserved] = useState<Row | null>(null);
+  useEffect(() => {
+    let alive=true;
+    const load=async()=>{try {const v=await window.goteet.request('GET','/api/project-evidence');
+      if(alive)setObserved((v.projects || []).find((p:Row)=>p.project===(type==='project'?data.name:data.project)) || null);
+    }catch{if(alive)setObserved(null)}};
+    void load();const timer=window.setInterval(()=>{if(!document.hidden)void load()},60000);
+    return()=>{alive=false;window.clearInterval(timer)};
+  },[type,data.name,data.project]);
   const linked = tasks.filter((t) => t.project === (type === 'project' ? data.name : data.project));
   const checks: Row[] = data.checklist || [],
     complete = checks.filter((c) => c.done).length;
@@ -30,6 +39,10 @@ export function WorkItemDetails({
         {type === 'task' ? data.project || 'General' : 'Project workspace'}
         <span>{data.id ? data.id.slice(0, 8).toUpperCase() : 'UNSAVED'}</span>
       </div>
+      {observed && <section className="inline-note"><strong>Observed project activity · last 7 days</strong>
+        <p>{observed.sessions} sessions · {observed.commits} commits · {observed.agent_minutes} estimated agent minutes</p>
+        <small>Updates from enabled local observation. Activity is evidence of work, not task completion.</small>
+      </section>}
       <div className="detail-metrics">
         <div>
           <CheckCircle2 size={18} />

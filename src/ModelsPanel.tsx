@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, Download, ExternalLink, LogIn, RefreshCw } from 'lucide-react';
 type Row = Record<string, any>;
 const api = (route: string, value?: unknown) =>
-  window.workmate.request(value === undefined ? 'GET' : 'POST', route, value);
+  window.goteet.request(value === undefined ? 'GET' : 'POST', route, value);
 export function ModelsPanel({
   useModel,
   fail,
@@ -206,7 +206,7 @@ export function ModelsPanel({
               <button disabled={!selected?.configured} onClick={() => useModel(provider, selected.model)}>
                 Use in assistant
               </button>
-              <button onClick={() => window.workmate.external(selected.site).catch(fail)}>
+              <button onClick={() => window.goteet.external(selected.site).catch(fail)}>
                 <ExternalLink size={14} />
                 Get API key
               </button>
@@ -248,7 +248,7 @@ export function ModelsPanel({
                 >
                   Start Ollama
                 </button>
-                <button onClick={() => window.workmate.external('https://ollama.com/download').catch(fail)}>
+                <button onClick={() => window.goteet.external('https://ollama.com/download').catch(fail)}>
                   Get Ollama
                 </button>
               </div>
@@ -306,13 +306,13 @@ export function ModelsPanel({
                 <Download size={14} />
                 Download model
               </button>
-              <button onClick={() => window.workmate.external('https://ollama.com/library').catch(fail)}>
+              <button onClick={() => window.goteet.external('https://ollama.com/library').catch(fail)}>
                 <ExternalLink size={14} />
                 Ollama library
               </button>
               <button
                 onClick={() =>
-                  window.workmate.external('https://huggingface.co/models?library=gguf').catch(fail)
+                  window.goteet.external('https://huggingface.co/models?library=gguf').catch(fail)
                 }
               >
                 <ExternalLink size={14} />

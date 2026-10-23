@@ -124,7 +124,7 @@ def collect():
     temporary=DATA/'inventory.tmp'
     temporary.write_text(json.dumps(value,indent=2))
     temporary.replace(DATA/'inventory.json')
-    print(json.dumps({'github_repos':len(value['github']),'local_repos':len(value['local']['repos']),'media_files':len(value['local']['files']),'errors':errors,'captured_at':value['captured_at']}))
+    print(json.dumps({'github_repos':len(value['github']),'local_repos':len(value['local'].get('repos',[])),'media_files':len(value['local'].get('files',[])),'errors':errors,'captured_at':value['captured_at']}))
     return value
 
 if __name__=='__main__':collect()

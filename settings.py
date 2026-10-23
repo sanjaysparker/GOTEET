@@ -8,9 +8,9 @@ from zoneinfo import ZoneInfo
 from collector import DATA
 LOCK=threading.Lock()
 THEMES={'noir','glacier','abyssal','cirrus','ember','phosphor','crimson','orchid','paper','graphite','midnight','light'}
-DEFAULTS={'display_name':'Sanju','timezone':'Asia/Kolkata','start_view':'Today',
- 'github_enabled':True,'local_index_enabled':True,'google_enabled':True,'voice_enabled':True,'agent_enabled':True,'attachments_enabled':True,'media_preview_enabled':True,'file_browser_enabled':True,'updates_repository':'',
- 'role':'','organisation':'','location':'','website':'','bio':'','avatar_revision':'','activity_enabled':False,'theme':'noir','accent':'','density':'compact','reduce_motion':False,'auto_analysis':True,'analysis_provider':'',
+DEFAULTS={'display_name':'Local user','timezone':'Asia/Kolkata','start_view':'Connections',
+ 'github_enabled':False,'local_index_enabled':False,'google_enabled':True,'voice_enabled':True,'agent_enabled':True,'attachments_enabled':True,'media_preview_enabled':True,'file_browser_enabled':True,'updates_repository':'',
+ 'role':'','organisation':'','location':'','website':'','bio':'','avatar_revision':'','activity_enabled':False,'theme':'noir','accent':'','density':'compact','reduce_motion':False,'auto_analysis':False,'analysis_provider':'','analysis_model':'',
  'system_calendar_enabled':False,'calendar_autotasks':False,'calendar_notifications':True,'reminder_lead_minutes':15,'agent_observer_enabled':False,'agent_observer_titles':False}
 
 def get():
