@@ -119,7 +119,7 @@ The distribution includes an AGPL-3.0 Plane date helper; see `src/vendor/plane-d
 
 ## Intel Mac DMG
 
-Intel Macs use the `mac-x64.dmg` release asset; Apple Silicon Macs use `mac-arm64` builds. Drag GOTEET into Applications. Python, Node, Supabase CLI and developer tools are bundled or unnecessary for end users. Google accounts and workspace membership are configured inside the app.
+Intel Macs on macOS 14 or newer use the `mac-x64.dmg` release asset; Apple Silicon Macs use `mac-arm64` builds. Drag GOTEET into Applications. Python, Node, Supabase CLI and developer tools are bundled or unnecessary for end users. Google accounts and workspace membership are configured inside the app.
 
 Build on an Intel Mac or on Apple Silicon with Rosetta installed:
 

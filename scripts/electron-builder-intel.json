@@ -2,16 +2,44 @@
   "extends": null,
   "appId": "in.droneos.goteet",
   "productName": "GOTEET",
-  "directories": {"output": "release/intel"},
-  "files": ["desktop/**", "dist/**"],
-  "extraResources": [{"from": "build/intel/payload", "to": "payload"}],
+  "directories": {
+    "output": "release/intel"
+  },
+  "files": [
+    "desktop/**",
+    "dist/**",
+    "!node_modules/**"
+  ],
+  "extraResources": [
+    {
+      "from": "build/intel/payload",
+      "to": "payload"
+    }
+  ],
   "artifactName": "GOTEET-${version}-mac-x64.${ext}",
   "mac": {
-    "target": [{"target": "dmg", "arch": ["x64"]}],
+    "target": [
+      {
+        "target": "dmg",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
     "category": "public.app-category.productivity",
     "identity": null,
     "icon": "desktop/assets/icon.png",
-    "extendInfo": {"NSMicrophoneUsageDescription": "GOTEET records audio only when you press the microphone control to dictate a work request."}
+    "extendInfo": {
+      "NSMicrophoneUsageDescription": "GOTEET records audio only when you press the microphone control to dictate a work request."
+    },
+    "minimumSystemVersion": "14.0"
   },
-  "protocols": [{"name": "GOTEET", "schemes": ["goteet"]}]
+  "protocols": [
+    {
+      "name": "GOTEET",
+      "schemes": [
+        "goteet"
+      ]
+    }
+  ]
 }
