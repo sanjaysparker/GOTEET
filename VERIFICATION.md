@@ -92,3 +92,13 @@ Removed Codex workmate-daily-brief and workmate-weekly-review automations via ap
 Installed /Applications/GOTEET.app 0.5.6; API health and /api/scheduler confirm the version and schedule configuration. Captured actual installed splash via CDP and inspected /tmp/goteet-startup.png; main window opens after backend readiness. Splash follows AIGIS reveal concept with GOTEET mark, orbit motion and reduced-motion CSS. Frontend and native packaging passed. Redundant staging app removed after live health check. Local execution stops when app/Mac is off; cloud scheduling and LLM narration are not implemented by this change.
 
 Live end-to-end schedule proof: on 23 October at 18:21:03 IST the installed backend completed daily, weekly and analysis slots with empty error fields. /api/inbox contains Daily review ready, Weekly review ready and Automatic work analysis. Collector capture advanced to 18:20:48. Agent observer captured 12 Claude and 28 Codex records without scan errors; app activity recorded 9 samples / 135.5 seconds at the check. Counts are coverage observations, not productivity measures.
+
+## Intel Mac 0.5.6 — 23 October 2026
+
+- Intel Python 3.12.15 backend; ONNX Runtime 1.23.2 and cryptography 48.0.1 retain x64 wheel support.
+- UI build passed; cloud-auth/scheduler regressions: 10 passed.
+- Packaged architecture audit: all 140 Mach-O files include x86_64. No arm64-only runtime dependency remains.
+- Packaged backend under Rosetta: health OK, version 0.5.6; tasks/projects/scheduler HTTP 200 in an isolated empty workspace.
+- Intel Electron main window rendered and was inspected via screenshot/CDP; test instance closed afterward. This is Rosetta validation, not physical Intel hardware testing.
+- Binary load-command audit requires macOS 14; installer declares 14.0. DMG integrity verified with hdiutil.
+- Installer and SHA256 published to v0.5.6. Unsigned/not notarized. GitHub native Intel workflow added; first cloud attempt found stale npm lockfile URL/integrity, corrected for subsequent run.

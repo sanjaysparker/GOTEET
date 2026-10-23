@@ -34,6 +34,7 @@ def main():
         raise RuntimeError('The installed desktop is not running')
     candidates = list((ROOT / 'release').glob('GOTEET*.app'))
     candidates += list((ROOT / 'release').glob('mac-*/GOTEET.app'))
+    candidates += list((ROOT / 'release').glob('intel/mac/GOTEET.app'))
     removed = 0
     for path in candidates:
         candidate = info(path)
